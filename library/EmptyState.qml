@@ -34,6 +34,7 @@ Item {
     }
 
     Text {
+      objectName: "emptyTitle"
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
       text: root.title
@@ -46,6 +47,7 @@ Item {
     }
 
     Text {
+      objectName: "emptyDetail"
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
       visible: text !== ""

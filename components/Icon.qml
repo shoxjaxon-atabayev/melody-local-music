@@ -37,7 +37,8 @@ OpticalGlyph {
     plus: 0xF0415,         // plus
     rename: 0xF03EB,       // pencil
     remove: 0xF0374,       // minus
-    search: 0xF0349        // magnify
+    search: 0xF0349,       // magnify
+    settings: 0xF0493      // cog
   })
 
   text: codes[name] !== undefined ? String.fromCodePoint(codes[name]) : ""

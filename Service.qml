@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import "core"
+import "core/BarDisplay.js" as BarDisplay
 import "core/Metadata.js" as Metadata
 import "core/Paths.js" as Paths
 
@@ -11,8 +12,9 @@ import "core/Paths.js" as Paths
 //
 // It picks one MPRIS player, exposes its track as sanitized properties, and
 // sends playback commands to that player only, when it supports them. It
-// also owns the Music Library window, the user's playlists, and Vinyl's
-// session queue.
+// also owns the Music Library window, the user's playlists, Vinyl's
+// session queue, the bar display mode, and the audio levels behind the
+// bar's visualizations.
 //
 // Player policy (predictable, sticky):
 //   - skip playerctld (a proxy that mirrors other players) and web browsers;
@@ -209,7 +211,7 @@ Item {
     onTriggered: if (root.player) root.player.positionChanged()
   }
 
-  // ---------------------------------------------------------------- library folder
+  // ---------------------------------------------------------------- settings
   // Stored on Vinyl's own entry in shell.json, through the shell's scoped
   // settings API (never by editing the file directly).
   readonly property var ownEntry: {
@@ -224,6 +226,19 @@ Item {
     }
     return null
   }
+
+  // The shell replaces the whole entry, so every other saved key is copied.
+  // False when there is no entry to save on (the widget isn't in the bar).
+  function saveSettings(changes) {
+    if (!shell || typeof shell.updateEntryInline !== "function" || !ownEntry) return false
+    var settings = {}
+    for (var k in ownEntry) if (k !== "id") settings[k] = ownEntry[k]
+    for (var c in changes) settings[c] = changes[c]
+    shell.updateEntryInline(pluginId, settings)
+    return true
+  }
+
+  // ---------------------------------------------------------------- library folder
   readonly property string savedLibraryRoot: ownEntry && typeof ownEntry.libraryFolder === "string"
     ? Paths.normalizedAbsolute(ownEntry.libraryFolder) : ""
   property string libraryRoot: ""
@@ -234,13 +249,49 @@ Item {
     var p = Paths.normalizedAbsolute(path)
     if (p === "") return false
     libraryRoot = p
-    if (shell && typeof shell.updateEntryInline === "function" && ownEntry) {
-      var settings = {}
-      for (var k in ownEntry) if (k !== "id") settings[k] = ownEntry[k]
-      settings.libraryFolder = p
-      shell.updateEntryInline(pluginId, settings)
-    }
+    saveSettings({ libraryFolder: p })
     return true
+  }
+
+  // What the Library window last found in the library folder: "unset",
+  // "unknown" (not listed yet), "ok", "empty" (no folders or audio files),
+  // or the listing's error ("missing", "notFolder", "permission",
+  // "timedOut", "failed").
+  property string libraryStatus: "unset"
+  onLibraryRootChanged: libraryStatus = libraryRoot === "" ? "unset" : "unknown"
+  // No folder yet, or the chosen one has nothing to play or can't be read.
+  readonly property bool needsLibrarySetup: libraryRoot === ""
+    || ["empty", "missing", "notFolder", "permission"].indexOf(libraryStatus) !== -1
+
+  // ---------------------------------------------------------------- bar display
+  // "trackInfo" (the default), "spectrum", or "pulseDots". A missing or
+  // unknown saved value means Track Info. A choice applies at once; it is
+  // also kept for this session when there is no entry to save it on.
+  readonly property string savedDisplayMode: BarDisplay.normalizeMode(ownEntry ? ownEntry.displayMode : undefined)
+  property string chosenDisplayMode: ""
+  readonly property string displayMode: chosenDisplayMode !== "" ? chosenDisplayMode : savedDisplayMode
+  onSavedDisplayModeChanged: chosenDisplayMode = ""
+
+  function setDisplayMode(mode) {
+    if (BarDisplay.normalizeMode(mode) !== mode) return false
+    chosenDisplayMode = mode
+    if (mode !== savedDisplayMode) saveSettings({ displayMode: mode })
+    // Choosing Spectrum again finds a cava installed since the last check.
+    if (mode === BarDisplay.SPECTRUM && (audio.cavaState !== "available" || audio.cavaFailed)) audio.checkCava()
+    return true
+  }
+
+  // Bar widgets currently drawing a visualization; audio is sampled only
+  // while > 0 and the player is playing.
+  property int audioViewers: 0
+
+  property AudioLevels audio: AudioLevels {
+    files: root.files
+    player: root.player
+    playing: root.hasTrack && root.isPlaying
+    viewed: root.audioViewers > 0
+    mode: root.displayMode
+    folder: root.queueDir
   }
 
   // ---------------------------------------------------------------- library window

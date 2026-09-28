@@ -28,7 +28,9 @@ GlassSurface {
     : root.info.isPlaying ? "NOW PLAYING" : "PAUSED"
   readonly property string titleText: !root.info.hasTrack ? "Nothing playing"
     : (root.info.title || "Unknown track")
-  readonly property string artistText: !root.info.hasTrack ? "Play something in your music player"
+  readonly property string artistText: !root.info.hasTrack
+    ? (root.info.needsLibrarySetup ? "Set up your music library with the library button above"
+                                   : "Play something in your music player")
     : (root.info.artist || "Unknown artist")
 
   width: theme.cardWidth

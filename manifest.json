@@ -23,7 +23,8 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "schema": [
-      { "key": "libraryFolder", "type": "string", "label": "Music folder" }
+      { "key": "libraryFolder", "type": "string", "label": "Music folder" },
+      { "key": "displayMode", "type": "string", "label": "Bar display (trackInfo, spectrum, or pulseDots)" }
     ]
   }
 }

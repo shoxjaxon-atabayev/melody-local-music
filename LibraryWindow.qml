@@ -61,6 +61,7 @@ PanelWindow {
   property var menuTracks: []
   property string confirmKind: ""           // "", "delete", or "fresh"
   property string toast: ""
+  property bool settingsOpen: false
 
   readonly property bool chooser: section === "chooser"
   readonly property bool searching: query.trim() !== "" && !chooser
@@ -92,7 +93,8 @@ PanelWindow {
     if (listStatus === "permission") return "permission"
     if (listStatus === "timedOut") return "timedOut"
     if (listStatus === "failed") return "failed"
-    if (listStatus === "ok" && listing && listing.total === 0) return "noAudio"
+    // Nothing to browse: the whole library is empty, or just this subfolder.
+    if (listStatus === "ok" && listing && listing.total === 0) return dir === libraryRoot ? "emptyLibrary" : "noAudio"
     return ""
   }
 
@@ -185,6 +187,10 @@ PanelWindow {
     dir = path
     listStatus = "loading"
     source.list(path, "library", function(result) {
+      // What the library folder holds also tells the bar whether to offer
+      // setup ("Set up music library").
+      if (path === win.libraryRoot)
+        win.service.libraryStatus = result.status !== "ok" ? result.status : result.total === 0 ? "empty" : "ok"
       if (win.dir !== path) return
       win.listing = result.status === "ok" ? result : null
       win.listStatus = result.status
@@ -243,6 +249,7 @@ PanelWindow {
       list.forceActiveFocus()
     } else {
       menuOpen = false
+      settingsOpen = false
       confirmKind = ""
       naming = ""
       // Nothing keeps running while the window is closed; the search index
@@ -563,6 +570,19 @@ PanelWindow {
     menuOpen = true
   }
 
+  function openSettings() {
+    menuOpen = false
+    var p = settingsButton.mapToItem(body, settingsButton.width, 0)
+    settings.anchorRight = Math.min(body.width, p.x)
+    settings.anchorTop = p.y + settingsButton.height + Style.spacing.xxs
+    settingsOpen = true
+  }
+
+  function closeSettings() {
+    settingsOpen = false
+    list.forceActiveFocus()
+  }
+
   function rowAction(index, item) {
     var row = rows[index]
     if (!row || row.kind !== "track" || !canEdit) return
@@ -716,7 +736,7 @@ PanelWindow {
       enabled: win.open                    // no input during the fade-out
 
       Keys.onPressed: (event) => {
-        if (confirm.handleKey(event) || menu.handleKey(event)) {
+        if (confirm.handleKey(event) || menu.handleKey(event) || settings.handleKey(event)) {
           event.accepted = true
           return
         }
@@ -815,6 +835,21 @@ PanelWindow {
               win.resetCursor()
               if (text.trim() !== "") win.ensureSearchIndex()
             }
+          }
+
+          // Settings (the bar display mode); available in every state,
+          // including an empty or unset library.
+          IconButton {
+            id: settingsButton
+            objectName: "settingsButton"
+            theme: win.theme
+            anchors.verticalCenter: parent.verticalCenter
+            iconName: "settings"
+            text: "Settings"
+            quiet: true
+            diameter: theme.px(26)
+            iconSize: Style.font.iconLarge
+            onClicked: win.settingsOpen ? win.closeSettings() : win.openSettings()
           }
 
           IconButton {
@@ -1255,7 +1290,8 @@ PanelWindow {
             // The folder chooser.
             Button {
               objectName: "cancelChooser"
-              visible: win.chooser && win.libraryRoot !== ""
+              // With no folder chosen yet, Cancel goes back to the welcome state.
+              visible: win.chooser
               text: "Cancel"
               bordered: true
               foreground: theme.textPrimary
@@ -1350,13 +1386,15 @@ PanelWindow {
             visible: win.hero !== ""
             theme: win.theme
             icon: ({ noFolder: "library", missing: "alert", folderGone: "alert", permission: "folderLock",
+                     emptyLibrary: "musicOff",
                      noAudio: "musicOff", timedOut: "timer", loading: "folder", searching: "search",
                      failed: "alert", emptyPlaylist: "playlist", chooserMissing: "alert",
                      chooserPermission: "folderLock", chooserTimedOut: "timer" })[win.hero] || "folder"
             error: win.hero === "missing" || win.hero === "permission" || win.hero === "folderGone"
               || win.hero === "chooserMissing" || win.hero === "chooserPermission"
             title: ({
-              noFolder: "Choose your music folder",
+              noFolder: "Your music library is empty",
+              emptyLibrary: "Your music library is empty",
               missing: "Music folder not found",
               folderGone: "This folder is gone",
               permission: "Can’t open this folder",
@@ -1371,7 +1409,8 @@ PanelWindow {
               chooserTimedOut: "This folder is taking too long"
             })[win.hero] || ""
             detail: ({
-              noFolder: "Vinyl shows the music in one folder you choose. Nothing is scanned in the background.",
+              noFolder: "Choose the folder where you keep your music to get started. Vinyl shows only that folder and never scans in the background.",
+              emptyLibrary: Paths.displayName(win.libraryRoot) + " has no music Vinyl can play (mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, or mka). Choose another folder, or add music to this one and check again.",
               missing: Paths.displayName(win.libraryRoot) + " was moved or deleted.",
               folderGone: "It was moved or deleted while the library was open.",
               permission: "You don’t have permission to read " + Paths.displayName(win.dir) + ".",
@@ -1380,11 +1419,12 @@ PanelWindow {
               emptyPlaylist: "Select tracks in your library, then choose Add to playlist.",
               chooserPermission: "You don’t have permission to read " + Paths.displayName(win.chooserDir) + "."
             })[win.hero] || ""
-            primaryAction: ({ noFolder: "Choose folder", missing: "Choose folder", permission: "Choose folder",
+            primaryAction: ({ noFolder: "Choose Music Folder", emptyLibrary: "Choose Another Folder",
+                              missing: "Choose folder", permission: "Choose folder",
                               folderGone: "Back to the library", noAudio: "Choose folder", timedOut: "Try again",
                               failed: "Try again", emptyPlaylist: "Browse library",
                               chooserMissing: "Home", chooserPermission: "Home", chooserTimedOut: "Try again" })[win.hero] || ""
-            secondaryAction: win.hero === "missing" ? "Try again" : ""
+            secondaryAction: win.hero === "missing" ? "Try again" : win.hero === "emptyLibrary" ? "Check Again" : ""
             onPrimaryClicked: {
               var h = win.hero
               if (h === "timedOut" || h === "failed") win.listDir(win.dir)
@@ -1469,6 +1509,16 @@ PanelWindow {
         }
         onCloseRequested: { win.menuOpen = false; list.forceActiveFocus() }
         onRestoreFocus: list.forceActiveFocus()
+      }
+
+      // ------------------------------------------------------------ settings
+      SettingsMenu {
+        id: settings
+        anchors.fill: parent
+        theme: win.theme
+        service: win.service
+        opened: win.settingsOpen
+        onCloseRequested: win.closeSettings()
       }
     }
 

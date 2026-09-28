@@ -13,11 +13,16 @@ in the background, and never changes your music files.
 
 **In the bar**
 
-- A now-playing icon: a small cover thumbnail while music plays, dimmed when
-  paused, and a plain music note when nothing is playing.
-- Hover for the current title and artist.
+- What's playing, in the style you choose (see [Bar display](#bar-display)):
+  - **Track Info** (default): `Artist Name — Song Title`, with the title
+    shortened to 12 characters.
+  - **Spectrum**: small frequency bars that follow the music.
+  - **Pulse Dots**: a row of dots that follow how loud the music is.
+- Dimmed while paused. Hover for the full title and artist.
+- Right-click to pause or resume.
+- Before you've chosen a music folder, it shows **Set up music library**.
 
-**Mini-player** (click the icon)
+**Mini-player** (click Vinyl in the bar)
 
 - Cover art, title, artist, and album.
 - Play/pause, previous, next, shuffle, and repeat-one.
@@ -53,6 +58,12 @@ Omarchy's own panels.
   omarchy pkg add mpv mpv-mpris
   ```
 
+- Optional, for the **Spectrum** bar display only: **cava**.
+
+  ```bash
+  omarchy pkg add cava
+  ```
+
 ## Installation
 
 1. Add the plugin:
@@ -70,7 +81,7 @@ Omarchy's own panels.
    omarchy plugin enable community.shoxjaxon.vinyl
    ```
 
-   The Vinyl icon appears in the right section of your bar. To move it, use
+   Vinyl appears in the right section of your bar. To move it, use
    `omarchy bar move community.shoxjaxon.vinyl --section <left|center|right>`.
 
 You can also do both steps at once:
@@ -89,11 +100,28 @@ omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git -
 
    Vinyl never starts or stops a player for you.
 
-2. Click the Vinyl icon in the bar, then the library button next to the close
-   button.
-3. Choose your music folder: browse to it and click **Use this folder**.
-   Vinyl remembers it.
+2. Click **Set up music library** in the bar, then the library button next
+   to the close button.
+3. Click **Choose Music Folder**, browse to your music, and click **Use this
+   folder**. Vinyl remembers it. (If the folder has no music Vinyl can play,
+   the library says so and lets you choose another one.)
 4. Double-click a track (or select it and press Enter) to play it.
+
+## Bar display
+
+Open the Music Library and click the **Settings** button (the cog next to
+the close button). Choose how the bar shows what's playing:
+
+| Mode | Shows |
+|---|---|
+| **Track Info** (default) | `Artist Name — Song Title`. The artist is shown in full; the title is shortened to 12 characters, ending in "…" when cut. |
+| **Spectrum** | Ten small bars, low to high frequencies, measured from the music. Needs **cava**. |
+| **Pulse Dots** | Five dots whose size follows how loud the music is. |
+
+The choice applies at once and is kept after restarts. Spectrum and Pulse
+Dots move only with real audio: while paused, or when there is no audio to
+read, they rest flat. They read only your music player's own sound, never
+other apps (see [Privacy](#privacy)).
 
 ## Using the Music Library
 
@@ -107,6 +135,7 @@ omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git -
   **Shift-click** for a range), and choose **Add to playlist**.
 - In a playlist, hover a track and click **−** to remove it, or use
   **Rename**, **Delete**, and **Play playlist** at the top.
+- Click the cog next to the close button for **Settings** (the bar display).
 - Click outside the window to close it.
 
 **Keyboard**
@@ -139,6 +168,9 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
 
 - **Music folder:** choose it in the library (**Change folder**). It is saved
   with Vinyl's entry in `~/.config/omarchy/shell.json` as `libraryFolder`.
+- **Bar display:** choose it in the library's **Settings**. It is saved in
+  the same entry as `displayMode`: `trackInfo`, `spectrum`, or `pulseDots`.
+  A missing or unknown value means Track Info.
 - **Playlists** are saved in `~/.local/share/vinyl/playlists.json`
   (or `$XDG_DATA_HOME/vinyl/playlists.json`). The folder and file are
   private to your user. Limits: 100 playlists, 1,000 tracks per playlist,
@@ -188,9 +220,23 @@ Vinyl uses the icon glyphs of your Omarchy font. Omarchy installs a font with
 these glyphs by default (JetBrainsMono Nerd Font); reinstall it if it was
 removed.
 
-**The icon doesn't appear in the bar**
+**Vinyl doesn't appear in the bar**
 Check that the plugin is enabled: `omarchy plugin list`. If you edited the
 plugin's files by hand, reload with `omarchy-shell shell rescanPlugins`.
+
+**Spectrum says it needs cava**
+Install it with `omarchy pkg add cava`, then choose Spectrum again in the
+library's Settings. Track Info and Pulse Dots don't need it.
+
+**Spectrum or Pulse Dots stay flat while music plays**
+They read the sound of your music player's own PipeWire stream. Hover Vinyl
+in the bar: "No audio data" means that stream wasn't found — for example, the
+player outputs audio without PipeWire, or its audio is turned off. The dots
+and bars never move without real sound.
+
+**The bar shows text on a horizontal bar only**
+On a bar placed left or right there is no room for text or visualizations,
+so Vinyl shows its music note in every mode.
 
 ## Removing Vinyl
 
@@ -208,6 +254,13 @@ chosen music folder and its own playlists file, and writes only its
 playlists file, a temporary queue file in your private runtime folder
 (emptied as soon as mpv has loaded it), and its settings entry in
 `shell.json`.
+
+With **Spectrum** or **Pulse Dots** selected, and only while music plays,
+Vinyl also reads the sound level of your music player's own output — never
+other applications, never your microphone. Pulse Dots reads it inside the
+shell; Spectrum reads it through cava, using a small settings file in the
+same private runtime folder. Nothing is recorded, stored, or sent. With
+Track Info (the default), no audio is read at all.
 
 ## License
 
