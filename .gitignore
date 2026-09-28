@@ -1,0 +1,40 @@
+# Vinyl is installed as a plain git checkout of this repository, so only the
+# files the plugin needs at runtime (and user documentation) are tracked.
+
+# Development-only material (kept locally, never published)
+/PLAN.md
+/dev/
+/prototype/
+/library-prototype/
+/tests/
+/notes/
+/screenshots/
+/docs/internal/
+
+# Local development configuration
+/.claude/
+/.vscode/
+/.idea/
+/.env
+/.env.*
+*.code-workspace
+
+# Logs, caches, build artifacts, temporary files
+*.log
+*.qslog
+*.tmp
+*.bak
+*.bak-*
+*.swp
+*.swo
+*~
+.DS_Store
+__pycache__/
+*.pyc
+.cache/
+.qmlcache/
+*.qmlc
+*.jsc
+/build/
+/dist/
+/tmp/

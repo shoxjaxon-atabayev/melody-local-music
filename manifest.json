@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "community.shoxjaxon.vinyl",
+  "name": "Vinyl",
+  "version": "0.2.0",
+  "author": "shoxjaxon",
+  "license": "MIT",
+  "description": "A minimal local music mini-player and music library for the Omarchy bar. Shows and controls what your local player (mpv, MPD, and other MPRIS players) is playing, and browses, searches, and plays a music folder you choose — with your own playlists — through mpv. No network access, no background scanning.",
+  "kinds": [
+    "service",
+    "bar-widget",
+    "panel"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "LibraryPanel.qml"
+  },
+  "barWidget": {
+    "displayName": "Vinyl",
+    "description": "Now-playing indicator with a mini-player and a music library",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "schema": [
+      { "key": "libraryFolder", "type": "string", "label": "Music folder" }
+    ]
+  }
+}
