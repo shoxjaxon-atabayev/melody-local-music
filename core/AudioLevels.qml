@@ -35,7 +35,7 @@ QtObject {
   // Private runtime folder (0700) that holds cava's config file.
   property string folder: ""
   property string cavaBinary: "/usr/bin/cava"
-  readonly property int bandCount: 10
+  readonly property int bandCount: 24
 
   readonly property bool wantPeaks: viewed && playing && mode === BarDisplay.PULSE_DOTS
   readonly property bool wantBands: viewed && playing && mode === BarDisplay.SPECTRUM

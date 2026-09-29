@@ -122,7 +122,7 @@ the close button). Choose how the bar shows what's playing:
 | Mode | Shows |
 |---|---|
 | **Track Info** (default) | `Artist Name — Song Title`. The artist is shown in full; the title is shortened to 12 characters, ending in "…" when cut. |
-| **Spectrum** | Ten small bars, low to high frequencies, measured from the music. Needs **cava**. |
+| **Spectrum** | Twenty-four small bars, low to high frequencies, measured from the music. Needs **cava**. |
 | **Pulse Dots** | Five dots whose size follows how loud the music is. |
 
 The choice applies at once and is kept after restarts. Spectrum and Pulse
