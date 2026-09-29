@@ -22,8 +22,11 @@ QtObject {
 
   required property PrivateFiles files
   property var player: null
-  // Vinyl's own player: its mpv's process id (instead of `player`).
+  // Vinyl's own player (instead of `player`): its mpv's process id, and the
+  // client name it plays under. mpv's native PipeWire stream carries only
+  // the name (the process id is on its client, which isn't visible here).
   property string processId: ""
+  property string clientName: ""
   property string trackTitle: ""
   property bool playing: false
   // A bar is currently showing a visualization.
@@ -56,7 +59,8 @@ QtObject {
     ? Pipewire.nodes.values.filter(function(n) { return n && n.isStream && !n.isSink }) : []
   property PwObjectTracker tracker: PwObjectTracker { objects: root.outputStreams }
 
-  readonly property var playerIds: processId !== "" ? { names: [], pid: processId } : identify(player)
+  readonly property var playerIds: processId !== ""
+    ? { names: clientName !== "" ? [clientName.toLowerCase()] : [], pid: processId, own: true } : identify(player)
   readonly property var stream: pickStream(outputStreams, playerIds, trackTitle)
 
   // The names and process id the player is known by on D-Bus: "mpv" from
@@ -84,8 +88,10 @@ QtObject {
   }
 
   // The player's stream: by process id when known, otherwise by name
-  // (binary, application name, node name). With several streams of the
-  // same player, the one whose media name mentions the track wins.
+  // (binary, application name, node name). Vinyl's own mpv: a stream that
+  // has no process id is matched by the client name Vinyl gave it. With
+  // several streams of the same player, the one whose media name mentions
+  // the track wins.
   function pickStream(streams, ids, title) {
     if (ids.names.length === 0 && ids.pid === "") return null
     var matches = []
@@ -94,8 +100,11 @@ QtObject {
       if (!n || !n.ready) continue
       var props = n.properties || {}
       if (ids.pid !== "") {
-        if (String(props["application.process.id"] || "") === ids.pid) matches.push(n)
-        continue
+        var procId = String(props["application.process.id"] || "")
+        if (procId !== "" || !ids.own) {
+          if (procId === ids.pid) matches.push(n)
+          continue
+        }
       }
       var keys = [props["application.process.binary"], props["application.name"], props["node.name"], n.name]
       for (var k = 0; k < keys.length; k++) {

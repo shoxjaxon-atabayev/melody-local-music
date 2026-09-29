@@ -417,6 +417,7 @@ Item {
     files: root.files
     player: root.usingEngine ? null : root.player
     processId: root.usingEngine ? root.engine.pid : ""
+    clientName: root.engine.clientName
     trackTitle: root.title
     playing: root.hasTrack && root.isPlaying
     viewed: root.audioViewers > 0

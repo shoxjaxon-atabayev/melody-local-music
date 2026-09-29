@@ -36,6 +36,9 @@ QtObject {
   property var extraArgs: []
 
   readonly property int maxQueue: 1000
+  // The name mpv plays under (PipeWire application and node name); the bar's
+  // visualizations find Vinyl's audio stream by it.
+  readonly property string clientName: "Vinyl"
   readonly property string socketPath: runtimeFolder + "/mpv.sock"
   readonly property string listFile: runtimeFolder + "/queue.m3u"
   readonly property string emptyList: "#EXTM3U\n"
@@ -358,7 +361,7 @@ QtObject {
       "--load-scripts=no",
       "--resume-playback=no",         // Vinyl keeps positions itself
       "--save-position-on-quit=no",
-      "--audio-client-name=Vinyl",
+      "--audio-client-name=" + clientName,
       "--input-ipc-server=" + socketPath]
     if (mprisScript !== "") args.push("--script=" + mprisScript)
     return args.concat(extraArgs)
