@@ -22,6 +22,9 @@ QtObject {
 
   required property PrivateFiles files
   property var player: null
+  // Vinyl's own player: its mpv's process id (instead of `player`).
+  property string processId: ""
+  property string trackTitle: ""
   property bool playing: false
   // A bar is currently showing a visualization.
   property bool viewed: false
@@ -53,8 +56,8 @@ QtObject {
     ? Pipewire.nodes.values.filter(function(n) { return n && n.isStream && !n.isSink }) : []
   property PwObjectTracker tracker: PwObjectTracker { objects: root.outputStreams }
 
-  readonly property var playerIds: identify(player)
-  readonly property var stream: pickStream(outputStreams, playerIds, player ? String(player.trackTitle || "") : "")
+  readonly property var playerIds: processId !== "" ? { names: [], pid: processId } : identify(player)
+  readonly property var stream: pickStream(outputStreams, playerIds, trackTitle)
 
   // The names and process id the player is known by on D-Bus: "mpv" from
   // org.mpris.MediaPlayer2.mpv, and 1234 from ….mpv.instance1234 (added by

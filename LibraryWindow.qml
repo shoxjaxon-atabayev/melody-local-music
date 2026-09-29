@@ -15,16 +15,18 @@ import "core/Paths.js" as Paths
 // system glyphs, a 140 ms fade, a brief keyboard-focus prime, and closing
 // on Escape, the close button, or a click outside. Centered on the screen.
 //
-// Left: the library folder and the user's playlists. Right: a folder, a
-// playlist, search results, or the folder chooser. Playback goes to the
-// player through Vinyl's session queue (the service); controls stay in the
+// Left: the library folder and the user's playlists. Right: the whole
+// library as one list — every song in the chosen folder and its subfolders,
+// in blocks headed by each folder's path — or a playlist, search results,
+// or the folder chooser. Clicking a song plays it in Vinyl's own player,
+// with the rest of the list queued after it; controls stay in the
 // mini-player.
 //
-// Keys: ↑/↓ move, Enter opens or plays, Backspace goes up a folder, "/"
-// searches, Space selects, Shift+↑/↓ extends the selection, Ctrl+A selects
-// all, Alt+↑/↓ moves a track within a playlist, Delete removes it from the
-// playlist, Escape closes a menu, clears the selection or the search, then
-// closes the window.
+// Keys: ↑/↓ move, Enter plays (or opens a folder in the chooser),
+// Backspace goes up a folder in the chooser, "/" searches, Space selects,
+// Shift+↑/↓ extends the selection, Ctrl+A selects all, Alt+↑/↓ moves a track
+// within a playlist, Delete removes it from the playlist, Escape closes a
+// menu, clears the selection or the search, then closes the window.
 PanelWindow {
   id: win
 
@@ -39,16 +41,16 @@ PanelWindow {
   readonly property string home: Quickshell.env("HOME") || "/"
 
   // ---------------------------------------------------------------- view state
-  property string section: "folders"        // "folders", "playlist", or "chooser"
-  property string dir: ""                   // current library folder
-  property var listing: null                // FolderSource result for `dir`
-  property string listStatus: "idle"
+  property string section: "library"        // "library", "playlist", or "chooser"
+  // Every song in the library: { root, groups: [{ folder, names }], files
+  // (relative paths, in list order), truncated, status }. Kept while the
+  // window is closed and refreshed on every open.
+  property var libraryIndex: null
+  property string indexStatus: "idle"       // "idle", "loading", "ready", or the scan's error
   property string chooserDir: ""
   property var chooserListing: null
   property string chooserStatus: "idle"
   property string query: ""
-  property var searchIndex: null            // { root, files, truncated, status }
-  property string searchStatus: "idle"      // "idle", "loading", "ready"
   property string playlistId: ""
   property var playlistEntries: []
   property var entryStatus: ({})            // path -> status
@@ -74,7 +76,7 @@ PanelWindow {
     return null
   }
   readonly property bool playlistEmpty: inPlaylist && currentPlaylist !== null && currentPlaylist.count === 0
-  readonly property bool playerAvailable: service.libraryPlayer !== null
+  readonly property int trackCount: libraryIndex ? libraryIndex.files.length : 0
 
   // Full-card states instead of the list.
   readonly property string hero: {
@@ -87,19 +89,22 @@ PanelWindow {
     }
     if (libraryRoot === "") return "noFolder"
     if (inPlaylist) return playlistEmpty ? "emptyPlaylist" : ""
-    if (searching) return searchStatus === "loading" ? "searching" : ""
-    if (listStatus === "loading" && !listing) return "loading"
-    if (listStatus === "missing" || listStatus === "notFolder") return dir === libraryRoot ? "missing" : "folderGone"
-    if (listStatus === "permission") return "permission"
-    if (listStatus === "timedOut") return "timedOut"
-    if (listStatus === "failed") return "failed"
-    // Nothing to browse: the whole library is empty, or just this subfolder.
-    if (listStatus === "ok" && listing && listing.total === 0) return dir === libraryRoot ? "emptyLibrary" : "noAudio"
+    if (!libraryIndex) {
+      if (indexStatus === "missing" || indexStatus === "notFolder") return "missing"
+      if (indexStatus === "permission") return "permission"
+      if (indexStatus === "timedOut") return "timedOut"
+      if (indexStatus === "failed") return "failed"
+      return "loading"
+    }
+    if (libraryIndex.files.length === 0) return libraryIndex.status === "timedOut" ? "timedOut" : libraryIndex.status === "failed" ? "failed" : "emptyLibrary"
     return ""
   }
 
   // ---------------------------------------------------------------- rows
   function sectionHeader(label, count) { return { kind: "header", label: label, count: count } }
+
+  // Headers and folder blocks' headings: part of the list, never a target.
+  function isStatic(row) { return !row || row.kind === "header" || row.kind === "group" }
 
   function trackRow(path, number, location) {
     var name = Paths.baseName(path)
@@ -113,6 +118,34 @@ PanelWindow {
     return Paths.displayName(rel.split("/").join(" › "))
   }
 
+  // A path for people: the home folder as "~".
+  function shortPath(path) {
+    var p = String(path)
+    if (home !== "/" && (p === home || p.indexOf(home + "/") === 0)) p = "~" + p.slice(home.length)
+    return Paths.displayName(p)
+  }
+
+  function thousands(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",") }
+
+  // The whole library, built once per scan: a heading per folder (its path
+  // below the library folder), then that folder's songs.
+  readonly property var libraryRows: {
+    var out = []
+    if (!libraryIndex) return out
+    var groups = libraryIndex.groups
+    for (var g = 0; g < groups.length; g++) {
+      var folder = groups[g].folder
+      var names = groups[g].names
+      out.push({ kind: "group", folder: folder, count: names.length,
+                 label: folder === "" ? Paths.displayName(Paths.baseName(libraryIndex.root) || "/")
+                                      : Paths.displayName(folder.split("/").join(" / ")) })
+      var dir = folder === "" ? libraryIndex.root : Paths.join(libraryIndex.root, folder)
+      for (var n = 0; n < names.length; n++)
+        out.push(trackRow(Paths.join(dir, names[n]), Paths.trackNumber(names[n]), ""))
+    }
+    return out
+  }
+
   readonly property var rows: {
     if (hero !== "") return []
     var out = []
@@ -124,18 +157,16 @@ PanelWindow {
       return out
     }
     if (searching) {
-      var idx = searchIndex ? searchIndex.files : []
+      var files = libraryIndex ? libraryIndex.files : []
       var q = query.trim().toLowerCase()
       var matches = []
-      for (var s = 0; s < idx.length; s++) if (idx[s].toLowerCase().indexOf(q) !== -1) matches.push(idx[s])
-      var results = []
-      for (var m = 0; m < matches.length && m < 500; m++) {
-        var p = Paths.join(libraryRoot, matches[m])
-        results.push(trackRow(p, Paths.trackNumber(Paths.baseName(p)), locationOf(p)))
-      }
-      results.sort(function(a, b) { return Paths.naturalCompare(a.title, b.title) })
+      for (var s = 0; s < files.length; s++) if (files[s].toLowerCase().indexOf(q) !== -1) matches.push(files[s])
       out.push(sectionHeader("Results", matches.length))
-      return out.concat(results)
+      for (var m = 0; m < matches.length && m < 500; m++) {
+        var p = Paths.join(libraryIndex.root, matches[m])
+        out.push(trackRow(p, Paths.trackNumber(Paths.baseName(p)), locationOf(p)))
+      }
+      return out
     }
     if (inPlaylist) {
       var entries = playlistEntries
@@ -152,16 +183,7 @@ PanelWindow {
       }
       return out
     }
-    if (!listing) return out
-    if (listing.folders.length) out.push(sectionHeader("Folders", listing.folders.length))
-    for (var f = 0; f < listing.folders.length; f++)
-      out.push({ kind: "folder", name: Paths.displayName(listing.folders[f]), path: Paths.join(dir, listing.folders[f]) })
-    if (listing.files.length) out.push(sectionHeader("Tracks", listing.files.length))
-    for (var t = 0; t < listing.files.length; t++) {
-      var tp = Paths.join(dir, listing.files[t])
-      out.push(trackRow(tp, Paths.trackNumber(listing.files[t]), ""))
-    }
-    return out
+    return libraryRows
   }
 
   readonly property int resultCount: searching && rows.length ? rows[0].count : 0
@@ -171,7 +193,7 @@ PanelWindow {
   }
 
   // A playlist shows its playing row only while that playlist is playing;
-  // folders and search results show the playing file wherever it appears.
+  // the library and search results show the playing file wherever it appears.
   function isPlayingRow(row) {
     if (row.kind !== "track" || row.path !== service.playingPath || row.path === "") return false
     if (!inPlaylist) return true
@@ -183,18 +205,65 @@ PanelWindow {
   property FolderSource source: FolderSource {}
   property PathValidator validator: PathValidator {}
 
-  function listDir(path) {
-    dir = path
-    listStatus = "loading"
-    source.list(path, "library", function(result) {
-      // What the library folder holds also tells the bar whether to offer
-      // setup ("Set up music library").
-      if (path === win.libraryRoot)
-        win.service.libraryStatus = result.status !== "ok" ? result.status : result.total === 0 ? "empty" : "ok"
-      if (win.dir !== path) return
-      win.listing = result.status === "ok" ? result : null
-      win.listStatus = result.status
+  // Lists every song in the library folder: the folder itself is checked
+  // first, then collected (subfolders included; limits in FolderSource).
+  // The previous list stays on screen until the new one is in.
+  function scanLibrary() {
+    if (libraryRoot === "") return
+    var rootAtStart = libraryRoot
+    if (libraryIndex && libraryIndex.root !== rootAtStart) libraryIndex = null
+    indexStatus = "loading"
+    source.list(rootAtStart, "library", function(result) {
+      if (win.libraryRoot !== rootAtStart) return
+      if (result.status !== "ok") {
+        win.libraryIndex = null
+        win.indexStatus = result.status
+        // What the library folder holds also tells the bar whether to offer
+        // setup ("Set up music library").
+        win.service.libraryStatus = result.status
+        return
+      }
+      win.source.collect(rootAtStart, function(found) {
+        if (win.libraryRoot !== rootAtStart) return
+        // Unchanged since the last open: keep the list as it is (no rebuild).
+        if (!win.sameScan(win.libraryIndex, rootAtStart, found)) win.libraryIndex = win.buildIndex(rootAtStart, found)
+        win.indexStatus = found.status === "ok" ? "ready" : found.status
+        win.service.libraryStatus = win.libraryIndex.files.length ? "ok" : found.status === "ok" ? "empty" : found.status
+      })
     })
+  }
+
+  function sameScan(current, rootPath, found) {
+    if (!current || current.root !== rootPath || current.status !== found.status || current.truncated !== found.truncated) return false
+    var a = current.found, b = found.files
+    if (a.length !== b.length) return false
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+    return true
+  }
+
+  // Songs grouped by folder: the library folder's own songs first, then
+  // each folder in natural order, its songs in natural order.
+  function buildIndex(rootPath, found) {
+    var byFolder = {}
+    var folders = []
+    for (var i = 0; i < found.files.length; i++) {
+      var rel = found.files[i]
+      var slash = rel.lastIndexOf("/")
+      var folder = slash > 0 ? rel.slice(0, slash) : ""
+      if (!byFolder.hasOwnProperty(folder)) { byFolder[folder] = []; folders.push(folder) }
+      byFolder[folder].push(rel.slice(slash + 1))
+    }
+    folders.sort(function(a, b) {
+      if (a === "" || b === "") return a === b ? 0 : a === "" ? -1 : 1
+      return Paths.naturalCompare(a, b)
+    })
+    var groups = [], files = []
+    for (var f = 0; f < folders.length; f++) {
+      var names = byFolder[folders[f]].sort(Paths.naturalCompare)
+      groups.push({ folder: folders[f], names: names })
+      for (var n = 0; n < names.length; n++) files.push(folders[f] === "" ? names[n] : folders[f] + "/" + names[n])
+    }
+    return { root: rootPath, groups: groups, files: files, truncated: found.truncated, status: found.status, found: found.files }
   }
 
   function listChooser(path) {
@@ -204,19 +273,6 @@ PanelWindow {
       if (win.chooserDir !== path) return
       win.chooserListing = result.status === "ok" ? result : null
       win.chooserStatus = result.status
-    })
-  }
-
-  function ensureSearchIndex() {
-    if (libraryRoot === "") return
-    if (searchIndex && searchIndex.root === libraryRoot) return
-    if (searchStatus === "loading") return
-    searchStatus = "loading"
-    var rootAtStart = libraryRoot
-    source.collect(rootAtStart, function(result) {
-      if (win.libraryRoot !== rootAtStart) { win.searchStatus = "idle"; return }
-      win.searchIndex = { root: rootAtStart, files: result.files, truncated: result.truncated, status: result.status }
-      win.searchStatus = "ready"
     })
   }
 
@@ -252,27 +308,28 @@ PanelWindow {
       settingsOpen = false
       confirmKind = ""
       naming = ""
-      // Nothing keeps running while the window is closed; the search index
-      // is discarded (collected again on the next search).
+      // Nothing keeps running while the window is closed.
       source.cancel()
       validator.cancel()
-      searchIndex = null
-      searchStatus = "idle"
+      if (indexStatus === "loading") indexStatus = libraryIndex ? "ready" : "idle"
     }
   }
 
   function resetSession() {
-    section = "folders"
+    section = "library"
     query = ""
     playlistId = ""
     playlistEntries = []
     entryStatus = ({})
     resetCursor()
-    listing = null
-    if (libraryRoot !== "") listDir(libraryRoot)
+    scanLibrary()
   }
 
-  onLibraryRootChanged: if (open) resetSession()
+  onLibraryRootChanged: {
+    libraryIndex = null
+    indexStatus = "idle"
+    if (open) resetSession()
+  }
 
   // ---------------------------------------------------------------- navigation
   function resetCursor() {
@@ -282,13 +339,12 @@ PanelWindow {
   }
 
   function openLibrary() {
-    section = "folders"
+    section = "library"
     query = ""
     naming = ""
     store.notice = ""
     resetCursor()
-    if (libraryRoot !== "" && dir === "") listDir(libraryRoot)
-    else if (libraryRoot !== "" && listStatus !== "ok") listDir(dir)
+    if (libraryRoot !== "" && !libraryIndex && indexStatus !== "loading") scanLibrary()
   }
 
   function openPlaylist(id) {
@@ -314,8 +370,7 @@ PanelWindow {
 
   function useChooserFolder() {
     if (!service.setLibraryRoot(chooserDir)) return
-    section = "folders"
-    searchIndex = null
+    section = "library"
     resetSession()
   }
 
@@ -323,65 +378,71 @@ PanelWindow {
   // here, in the window's scope, not in the button's handler.
   function openCrumb(path) {
     resetCursor()
-    if (chooser) listChooser(path)
-    else listDir(path)
-  }
-
-  function goUp() {
-    if (dir === libraryRoot || dir === "") return
-    resetCursor()
-    listDir(Paths.dirName(dir))
+    listChooser(path)
   }
 
   readonly property var crumbs: {
     var out = []
-    if (chooser) {
-      var segs = chooserDir === "/" ? [] : chooserDir.split("/").slice(1)
-      out.push({ label: "/", path: "/" })
-      for (var i = 0; i < segs.length; i++)
-        out.push({ label: Paths.displayName(segs[i]), path: "/" + segs.slice(0, i + 1).join("/") })
-      return out
-    }
-    if (libraryRoot === "") return out
-    out.push({ label: Paths.displayName(Paths.baseName(libraryRoot) || "/"), path: libraryRoot })
-    var rel = Paths.relativeTo(libraryRoot, dir)
-    if (rel !== null) {
-      var parts = rel.split("/")
-      for (var j = 0; j < parts.length; j++)
-        out.push({ label: Paths.displayName(parts[j]), path: Paths.join(libraryRoot, parts.slice(0, j + 1).join("/")) })
-    }
+    if (!chooser) return out
+    var segs = chooserDir === "/" ? [] : chooserDir.split("/").slice(1)
+    out.push({ label: "/", path: "/" })
+    for (var i = 0; i < segs.length; i++)
+      out.push({ label: Paths.displayName(segs[i]), path: "/" + segs.slice(0, i + 1).join("/") })
     return out
   }
 
+  // What the list on screen is, as the queue's source.
+  function currentSource() {
+    if (searching) return { kind: "search", id: "", name: "Search results" }
+    if (inPlaylist) return { kind: "playlist", id: playlistId, name: currentPlaylist ? currentPlaylist.name : "Playlist" }
+    return { kind: "library", id: libraryRoot, name: Paths.baseName(libraryRoot) || "Music" }
+  }
+
   function activate(row) {
-    if (!row || row.kind === "header") return
+    if (isStatic(row)) return
     if (row.kind === "folder") {
       resetCursor()
-      if (chooser) listChooser(row.path)
-      else { query = ""; listDir(row.path) }
+      listChooser(row.path)
       return
     }
-    if (!playerAvailable) { service.queueError = "noPlayer"; return }
     if (row.unavailable) {
       showToast("“" + row.title + "” can't be played (" + (row.statusLabel || "missing").toLowerCase() + ").")
       return
     }
-    // Folder or search results: from this track to the end of the list,
-    // then stop. A playlist: only its tracks, from this one to the end,
-    // then from the beginning up to the one before it.
+    var src = currentSource()
+    // The song already playing from this same list: keep it going (a
+    // second click, or Enter again, never restarts it).
+    var q = service.queue
+    if (service.usingEngine && service.playingPath === row.path && q && q.source
+        && q.source.kind === src.kind && q.source.id === src.id) {
+      if (!service.isPlaying && !service.engine.loading && !service.queueStarting) service.togglePlaying()
+      return
+    }
+    if (service.queueStarting) return
+    // The library and search results: the whole list, from this song on
+    // (previous goes back up the list), ending after the last one. A
+    // playlist: only its tracks, from this one to the end, then from the
+    // beginning up to the one before it.
     var tracks = trackRows()
     var start = 0
     for (var i = 0; i < tracks.length; i++) {
       if (tracks[i].path === row.path && (row.entry === undefined || tracks[i].entry === row.entry)) { start = i; break }
     }
-    var ordered = inPlaylist ? tracks.slice(start).concat(tracks.slice(0, start)) : tracks.slice(start)
-    var paths = []
-    for (var k = 0; k < ordered.length; k++) if (!ordered[k].unavailable) paths.push(ordered[k].path)
-    if (paths.length > 1000) showToast("Playing the first 1,000 tracks (the queue limit).")
-    var sourceInfo = searching ? { kind: "search", id: "", name: "Search results" }
-      : inPlaylist ? { kind: "playlist", id: playlistId, name: currentPlaylist ? currentPlaylist.name : "Playlist" }
-      : { kind: "folder", id: dir, name: Paths.displayName(Paths.baseName(dir) || "Music") }
-    service.playFromLibrary(paths, sourceInfo)
+    var ordered = inPlaylist ? tracks.slice(start).concat(tracks.slice(0, start)) : tracks
+    var at = inPlaylist ? 0 : start
+    var paths = [], first = 0
+    for (var k = 0; k < ordered.length; k++) {
+      if (ordered[k].unavailable) continue
+      if (k === at) first = paths.length
+      paths.push(ordered[k].path)
+    }
+    var limit = service.engine.maxQueue
+    if (paths.length > limit) {
+      paths = paths.slice(first, first + limit)
+      first = 0
+      showToast("Playing 1,000 tracks from here (the queue limit).")
+    }
+    service.playFromLibrary(paths, first, src)
   }
 
   function playFirst() {
@@ -393,9 +454,9 @@ PanelWindow {
     var i = cursorIndex
     for (var step = 0; step < rows.length; step++) {
       i = Math.max(0, Math.min(rows.length - 1, i + delta))
-      if (rows[i] && rows[i].kind !== "header") break
+      if (!isStatic(rows[i])) break
     }
-    if (!rows[i] || rows[i].kind === "header") return
+    if (isStatic(rows[i])) return
     if (extend && rows[i].kind === "track" && canEdit) {
       if (anchorIndex < 0) anchorIndex = cursorIndex >= 0 ? cursorIndex : i
       setSelection(rangeKeys(anchorIndex, i))
@@ -428,18 +489,15 @@ PanelWindow {
     selection = s
   }
 
-  // Click: plain puts the cursor on a track and clears the selection; Ctrl
-  // toggles (the row clicked just before counts too); Shift selects a range.
+  // Click: plain (which also plays the song) puts the cursor on a track and
+  // clears the selection; Ctrl toggles a track, without playing it; Shift
+  // selects a range.
   function pick(index, modifiers) {
     var row = rows[index]
     if (!row || row.kind !== "track") return
     if (!canEdit || chooser) modifiers = Qt.NoModifier
     if (modifiers & Qt.ControlModifier) {
-      var first = rows[cursorIndex]
-      if (selectionCount === 0 && first && first.kind === "track" && cursorIndex !== index)
-        setSelection([first.path, row.path])
-      else
-        toggleSelected(row)
+      toggleSelected(row)
       anchorIndex = index
     } else if ((modifiers & Qt.ShiftModifier) && anchorIndex >= 0) {
       setSelection(rangeKeys(anchorIndex, index))
@@ -602,16 +660,14 @@ PanelWindow {
   }
 
   // ---------------------------------------------------------------- notices
-  // One notice at a time. What the user can't see otherwise comes first;
-  // the missing-player hint is also in the now-playing strip.
+  // One notice at a time. What the user can't see otherwise comes first.
   readonly property string noticeKind: {
     if (chooser) return ""
-    if (service.queueError !== "" && service.queueError !== "noPlayer") return "openFailed"
+    if (service.engine.mpvMissing) return "noPlayer"
+    if (service.playbackError !== "") return "openFailed"
     if (store.notice === "changed") return "storeChanged"
-    if (!searching && !inPlaylist && listing && listing.truncated) return "limit"
-    if (searching && searchIndex && (searchIndex.truncated || searchIndex.status === "timedOut")) return "searchLimited"
-    if (!playerAvailable || service.queueError === "noPlayer") return "noPlayer"
-    if (service.loopsWholeList && service.queue) return "loopsWholeList"
+    if (!inPlaylist && libraryIndex && libraryIndex.files.length > 0
+        && (libraryIndex.truncated || libraryIndex.status === "timedOut")) return "limit"
     return ""
   }
 
@@ -770,9 +826,8 @@ PanelWindow {
           win.removeSelectedOrCursor()
         } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !typing) {
           win.activate(win.rows[win.cursorIndex])
-        } else if (event.key === Qt.Key_Backspace && !typing && !win.searching) {
-          if (win.chooser) { if (win.chooserDir !== "/") win.openCrumb(Paths.dirName(win.chooserDir)) }
-          else if (win.section === "folders") win.goUp()
+        } else if (event.key === Qt.Key_Backspace && !typing && win.chooser) {
+          if (win.chooserDir !== "/") win.openCrumb(Paths.dirName(win.chooserDir))
         } else {
           return
         }
@@ -833,7 +888,6 @@ PanelWindow {
             onTextEdited: {
               win.query = text
               win.resetCursor()
-              if (text.trim() !== "") win.ensureSearchIndex()
             }
           }
 
@@ -903,7 +957,7 @@ PanelWindow {
             theme: win.theme
             iconName: "folder"
             label: win.libraryRoot !== "" ? Paths.displayName(Paths.baseName(win.libraryRoot) || "/") : "Choose folder"
-            current: win.section === "folders" && !win.searching
+            current: win.section === "library" && !win.searching
             playing: !!win.service.queue && win.service.queue.source.kind !== "playlist" && win.service.queueIndex >= 0
             onClicked: win.libraryRoot !== "" ? win.openLibrary() : win.openChooser()
           }
@@ -1097,7 +1151,7 @@ PanelWindow {
               anchors.verticalCenter: parent.verticalCenter
               width: parent.width
               visible: win.selectionCount === 0 && win.searching
-              text: win.searchStatus === "loading" ? "Searching…"
+              text: !win.libraryIndex ? "Searching…"
                 : win.resultCount + (win.resultCount === 1 ? " result" : " results") + " for “" + Paths.displayName(win.query.trim()) + "”"
               textFormat: Text.PlainText
               color: theme.textSecondary
@@ -1158,14 +1212,58 @@ PanelWindow {
               }
             }
 
-            // Breadcrumbs (library folders or the folder chooser).
+            // The library folder, as a path, and how many songs it holds.
+            Item {
+              objectName: "libraryPath"
+              anchors.fill: parent
+              visible: win.selectionCount === 0 && win.section === "library" && !win.searching && win.libraryRoot !== ""
+
+              Icon {
+                id: pathIcon
+                anchors.verticalCenter: parent.verticalCenter
+                name: "folder"
+                size: Style.font.iconLarge
+                color: theme.textSecondary
+              }
+
+              Text {
+                id: pathText
+                anchors.left: pathIcon.right
+                anchors.leftMargin: Style.spacing.sm
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, parent.width - pathIcon.width - Style.spacing.sm
+                  - (pathCount.visible ? pathCount.implicitWidth + Style.spacing.lg : 0))
+                text: win.shortPath(win.libraryRoot)
+                textFormat: Text.PlainText
+                color: theme.textPrimary
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontBody
+                font.bold: true
+                elide: Text.ElideMiddle
+              }
+
+              Text {
+                id: pathCount
+                anchors.left: pathText.right
+                anchors.leftMargin: Style.spacing.lg
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !!win.libraryIndex && win.hero === ""
+                text: win.thousands(win.trackCount) + (win.trackCount === 1 ? " song" : " songs")
+                textFormat: Text.PlainText
+                color: theme.textMuted
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontSmall
+              }
+            }
+
+            // Breadcrumbs (the folder chooser).
             Row {
               id: crumbRow
               anchors.left: parent.left
               anchors.leftMargin: -Style.spacing.controlPaddingX
               anchors.verticalCenter: parent.verticalCenter
               spacing: 0
-              visible: win.selectionCount === 0 && !win.searching && !win.inPlaylist
+              visible: win.selectionCount === 0 && win.chooser
 
               Repeater {
                 model: win.crumbs
@@ -1265,26 +1363,14 @@ PanelWindow {
               onClicked: win.playFirst()
             }
 
-            // A folder.
+            // The library.
             Button {
               objectName: "changeFolder"
-              visible: win.selectionCount === 0 && win.section === "folders" && !win.searching
+              visible: win.selectionCount === 0 && win.section === "library" && !win.searching
               text: "Change folder"
               bordered: true
               foreground: theme.textPrimary
               onClicked: win.openChooser()
-            }
-
-            Button {
-              objectName: "playFolder"
-              visible: win.selectionCount === 0 && win.section === "folders" && !win.searching
-                && win.hero === "" && win.listing !== null && win.listing.files.length > 0
-              text: "Play folder"
-              iconText: String.fromCodePoint(0xF040A)   // play
-              bordered: true
-              active: true
-              foreground: theme.textPrimary
-              onClicked: win.playFirst()
             }
 
             // The folder chooser.
@@ -1320,27 +1406,23 @@ PanelWindow {
           width: parent.width
           visible: win.noticeKind !== "" && win.hero !== "noFolder"
           height: visible ? implicitHeight : 0
-          error: win.noticeKind === "openFailed"
+          error: win.noticeKind === "openFailed" || win.noticeKind === "noPlayer"
           title: ({
-            noPlayer: "No compatible player is running",
-            openFailed: Paths.displayName(win.service.queueError),
+            noPlayer: "Vinyl needs mpv to play music",
+            openFailed: Paths.displayName(win.service.playbackError),
             storeChanged: "Your playlists changed outside Vinyl",
-            loopsWholeList: "mpv repeats the whole list",
-            searchLimited: "Search results may be incomplete",
-            limit: "Showing the first 5,000 items"
+            limit: win.libraryIndex && win.libraryIndex.status === "timedOut" ? "Only part of your library is listed"
+              : "Showing the first 20,000 songs"
           })[win.noticeKind] || ""
           detail: ({
-            noPlayer: "Start mpv to play from your library. Vinyl never starts a player itself.",
-            openFailed: "The file may have moved or become unreadable. Nothing else changed.",
+            noPlayer: "Install it, then click a song again.",
+            openFailed: "Click a song to try again.",
             storeChanged: "Vinyl reloaded them. Please repeat your change.",
-            loopsWholeList: "Its loop setting is on, so this list starts again after the last track. Vinyl doesn't change it.",
-            searchLimited: win.searchIndex && win.searchIndex.status === "timedOut"
-              ? "Search stopped after 10 seconds. Open a subfolder to browse the rest."
-              : "Search looks at the first 20,000 files and 8 folder levels.",
-            limit: win.listing ? "This folder has " + String(win.listing.total).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-              + " items. Open a subfolder or search to narrow it down." : ""
+            limit: win.libraryIndex && win.libraryIndex.status === "timedOut"
+              ? "Listing stopped after 10 seconds. Everything found so far can be played and searched."
+              : "Vinyl lists up to 20,000 songs, 8 folder levels deep."
           })[win.noticeKind] || ""
-          command: win.noticeKind === "noPlayer" ? "mpv --idle --force-window=no" : ""
+          command: win.noticeKind === "noPlayer" ? "omarchy pkg add mpv" : ""
         }
 
         // ---------------------------------------------------------- list or state
@@ -1373,10 +1455,10 @@ PanelWindow {
               cursor: index === win.cursorIndex
               playing: win.isPlayingRow(modelData)
               selected: modelData.kind === "track" && !!win.selection[modelData.path]
-              dimmed: modelData.kind === "track" && !win.playerAvailable
               action: modelData.kind !== "track" || win.chooser || !win.canEdit ? "" : (win.inPlaylist ? "remove" : "add")
               onPicked: (modifiers) => win.pick(index, modifiers)
-              onActivated: { win.cursorIndex = index; win.activate(modelData) }
+              // A plain click also clears a selection, like a plain click in Omarchy's lists.
+              onActivated: { win.pick(index, Qt.NoModifier); win.cursorIndex = index; win.activate(modelData) }
               onActionRequested: win.rowAction(index, rowDelegate)
             }
           }
@@ -1385,23 +1467,18 @@ PanelWindow {
             anchors.fill: parent
             visible: win.hero !== ""
             theme: win.theme
-            icon: ({ noFolder: "library", missing: "alert", folderGone: "alert", permission: "folderLock",
-                     emptyLibrary: "musicOff",
-                     noAudio: "musicOff", timedOut: "timer", loading: "folder", searching: "search",
-                     failed: "alert", emptyPlaylist: "playlist", chooserMissing: "alert",
-                     chooserPermission: "folderLock", chooserTimedOut: "timer" })[win.hero] || "folder"
-            error: win.hero === "missing" || win.hero === "permission" || win.hero === "folderGone"
+            icon: ({ noFolder: "library", missing: "alert", permission: "folderLock", emptyLibrary: "musicOff",
+                     timedOut: "timer", loading: "folder", failed: "alert", emptyPlaylist: "playlist",
+                     chooserMissing: "alert", chooserPermission: "folderLock", chooserTimedOut: "timer" })[win.hero] || "folder"
+            error: win.hero === "missing" || win.hero === "permission"
               || win.hero === "chooserMissing" || win.hero === "chooserPermission"
             title: ({
               noFolder: "Your music library is empty",
               emptyLibrary: "Your music library is empty",
               missing: "Music folder not found",
-              folderGone: "This folder is gone",
               permission: "Can’t open this folder",
-              noAudio: "No music in this folder",
               timedOut: "This folder is taking too long",
-              loading: "Loading folder…",
-              searching: "Searching your library…",
+              loading: "Loading your music…",
               failed: "Couldn’t read this folder",
               emptyPlaylist: "This playlist is empty",
               chooserMissing: "This folder doesn’t exist",
@@ -1409,32 +1486,28 @@ PanelWindow {
               chooserTimedOut: "This folder is taking too long"
             })[win.hero] || ""
             detail: ({
-              noFolder: "Choose the folder where you keep your music to get started. Vinyl shows only that folder and never scans in the background.",
-              emptyLibrary: Paths.displayName(win.libraryRoot) + " has no music Vinyl can play (mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, or mka). Choose another folder, or add music to this one and check again.",
-              missing: Paths.displayName(win.libraryRoot) + " was moved or deleted.",
-              folderGone: "It was moved or deleted while the library was open.",
-              permission: "You don’t have permission to read " + Paths.displayName(win.dir) + ".",
-              noAudio: "Vinyl lists mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, and mka files.",
-              timedOut: "Listing stopped after 5 seconds. Very large or slow folders can hit this limit.",
+              noFolder: "Choose the folder where you keep your music. Vinyl lists every song in it, subfolders included, and plays them itself.",
+              emptyLibrary: win.shortPath(win.libraryRoot) + " has no music Vinyl can play (mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, or mka), in it or in its subfolders. Choose another folder, or add music to this one and check again.",
+              missing: win.shortPath(win.libraryRoot) + " was moved or deleted.",
+              permission: "You don’t have permission to read " + win.shortPath(win.libraryRoot) + ".",
+              timedOut: "Listing stopped after 10 seconds. Very large or slow folders can hit this limit.",
               emptyPlaylist: "Select tracks in your library, then choose Add to playlist.",
               chooserPermission: "You don’t have permission to read " + Paths.displayName(win.chooserDir) + "."
             })[win.hero] || ""
             primaryAction: ({ noFolder: "Choose Music Folder", emptyLibrary: "Choose Another Folder",
-                              missing: "Choose folder", permission: "Choose folder",
-                              folderGone: "Back to the library", noAudio: "Choose folder", timedOut: "Try again",
+                              missing: "Choose folder", permission: "Choose folder", timedOut: "Try again",
                               failed: "Try again", emptyPlaylist: "Browse library",
                               chooserMissing: "Home", chooserPermission: "Home", chooserTimedOut: "Try again" })[win.hero] || ""
             secondaryAction: win.hero === "missing" ? "Try again" : win.hero === "emptyLibrary" ? "Check Again" : ""
             onPrimaryClicked: {
               var h = win.hero
-              if (h === "timedOut" || h === "failed") win.listDir(win.dir)
-              else if (h === "folderGone") win.listDir(win.libraryRoot)
+              if (h === "timedOut" || h === "failed") win.scanLibrary()
               else if (h === "emptyPlaylist") win.openLibrary()
               else if (h === "chooserMissing" || h === "chooserPermission") win.listChooser(win.home)
               else if (h === "chooserTimedOut") win.listChooser(win.chooserDir)
               else win.openChooser()
             }
-            onSecondaryClicked: win.listDir(win.libraryRoot)
+            onSecondaryClicked: win.scanLibrary()
           }
         }
       }
@@ -1455,8 +1528,7 @@ PanelWindow {
             + " of " + win.service.queue.paths.length
           : ""
         player: win.service.hasTrack ? win.service.playerName : ""
-        idleDetail: win.playerAvailable ? "Choose a track and press Enter to play it"
-          : "Start mpv to play from your library"
+        idleDetail: "Click a song to play it"
       }
 
       // ------------------------------------------------------------ short confirmation messages

@@ -4,8 +4,10 @@ import "Paths.js" as Paths
 // Reads folders for the Music Library with short-lived `find` processes
 // (PLAN §2.5): only the chosen folder and its subfolders, symlinks never
 // followed or shown, hidden entries skipped, only readable audio files by
-// extension, and resource limits. Listing: 5,000 entries, 5 s. Search
-// index: depth 8, 20,000 files, 10 s, collected once per window session.
+// extension, and resource limits. Listing one folder (the folder chooser,
+// and the library folder's own check): 5,000 entries, 5 s. Every song in
+// the library (the library list and search): depth 8, 20,000 files, 10 s,
+// collected each time the library window opens.
 QtObject {
   id: root
 

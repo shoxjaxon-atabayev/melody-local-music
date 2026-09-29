@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Services.Mpris
 import "core"
 import "core/BarDisplay.js" as BarDisplay
@@ -10,22 +11,27 @@ import "core/Paths.js" as Paths
 // Vinyl's shared state. The shell creates one instance for all monitors; bar
 // widgets reach it through `bar.shell.serviceFor(id)`.
 //
-// It picks one MPRIS player, exposes its track as sanitized properties, and
-// sends playback commands to that player only, when it supports them. It
-// also owns the Music Library window, the user's playlists, Vinyl's
-// session queue, the bar display mode, and the audio levels behind the
-// bar's visualizations.
+// Music from the library plays in Vinyl's own player (core/Engine.qml): no
+// player needs to be started by hand, and no player window opens. The bar
+// and the mini-player show that player, or another local MPRIS player while
+// it is the one playing. They get sanitized properties and send commands to
+// whichever of the two they show, only when it supports them. The service
+// also owns the Music Library window, the user's playlists, the bar display
+// mode, and the audio levels behind the bar's visualizations.
 //
-// Player policy (predictable, sticky):
-//   - skip playerctld (a proxy that mirrors other players) and web browsers;
-//   - a playing player wins; the current choice is kept while it still
-//     plays; otherwise the most recently playing one, then local music
-//     players (mpv, MPD, …) before others;
-//   - with nothing playing, keep the current choice while it exists, else
-//     the most recently playing, else one with track metadata;
-//   - when the chosen player disappears, fall back by the same rules, or go
-//     idle — never keep showing its old metadata;
-//   - a player the Music Library starts playback on becomes the choice.
+// What is shown (predictable, sticky):
+//   - Vinyl's player while it plays;
+//   - otherwise another player that is playing (see below);
+//   - otherwise Vinyl's player if it has a track (paused, or restored after
+//     a restart), unless another player was the last one playing.
+// Other players: skip playerctld (a proxy that mirrors other players), web
+// browsers, and Vinyl's own mpv (seen over MPRIS through mpv-mpris). A
+// playing player wins; the current choice is kept while it still plays;
+// otherwise the most recently playing one, then local music players (mpv,
+// MPD, …) before others. With nothing playing, keep the current choice while
+// it exists, else the most recently playing, else one with track metadata.
+// When the chosen player disappears, fall back by the same rules, or go
+// idle — never keep showing its old metadata.
 Item {
   id: root
 
@@ -37,68 +43,125 @@ Item {
   // Open popovers across monitors; position polling runs only while > 0.
   property int openPopovers: 0
 
+  // ---------------------------------------------------------------- files, playlists, player
+  property PrivateFiles files: PrivateFiles {}
+  property PlaylistStore store: PlaylistStore { files: root.files }
+
+  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
+  readonly property string queueDir: runtimeDir !== "" ? runtimeDir + "/vinyl" : ""
+
+  property Engine engine: Engine {
+    files: root.files
+    runtimeFolder: root.queueDir
+    dataFolder: root.store.dir
+  }
+
+  readonly property string engineKey: "vinyl"
+
+  // ---------------------------------------------------------------- other players
   readonly property var players: Mpris.players ? Mpris.players.values : []
   property MprisPlayer player: null
   property string lastPlayingKey: ""
 
-  // ---------------------------------------------------------------- track (sanitized)
-  readonly property bool hasPlayer: player !== null
-  readonly property bool isPlaying: hasPlayer && player.isPlaying
-  readonly property string title: hasPlayer ? Metadata.plainText(player.trackTitle, 300) : ""
-  readonly property string artist: hasPlayer ? Metadata.plainText(player.trackArtist, 300) : ""
-  readonly property string album: hasPlayer ? Metadata.plainText(player.trackAlbum, 300) : ""
-  readonly property string artUrl: hasPlayer ? Metadata.localArtUrl(player.trackArtUrl) : ""
-  readonly property bool hasTrack: hasPlayer
-    && (title !== "" || artist !== "" || player.playbackState !== MprisPlaybackState.Stopped)
-  readonly property string playerName: hasPlayer
-    ? (Metadata.plainText(player.identity, 64) || Metadata.plainText(player.desktopEntry, 64) || "Music player")
-    : ""
-  // The local file the player is on (from xesam:url), or "".
-  readonly property string playingPath: hasPlayer && player.metadata
-    ? Paths.pathFromUrl(player.metadata["xesam:url"]) : ""
+  // Vinyl's own mpv on D-Bus (mpv-mpris), found by its process id.
+  property string engineBusName: ""
+  property int busLookups: 0
 
-  readonly property real length: hasTrack && player.lengthSupported && isFinite(player.length) && player.length > 0
-    ? player.length : 0
+  // ---------------------------------------------------------------- what is shown
+  readonly property bool usingEngine: engine.hasTrack && (engine.isPlaying
+    || !(player && player.isPlaying) && !(player && lastPlayingKey !== "" && lastPlayingKey === playerKey(player)))
+
+  readonly property bool isPlaying: usingEngine ? engine.isPlaying : player !== null && player.isPlaying
+  readonly property string title: usingEngine ? Metadata.plainText(engine.tags.title, 300)
+    : player ? Metadata.plainText(player.trackTitle, 300) : ""
+  readonly property string artist: usingEngine ? Metadata.plainText(engine.tags.artist, 300)
+    : player ? Metadata.plainText(player.trackArtist, 300) : ""
+  readonly property string album: usingEngine ? Metadata.plainText(engine.tags.album, 300)
+    : player ? Metadata.plainText(player.trackAlbum, 300) : ""
+  readonly property string artUrl: usingEngine ? engineArtUrl
+    : player ? Metadata.localArtUrl(player.trackArtUrl) : ""
+  readonly property bool hasTrack: usingEngine || player !== null
+    && (title !== "" || artist !== "" || player.playbackState !== MprisPlaybackState.Stopped)
+  readonly property string playerName: usingEngine ? "Vinyl"
+    : player ? (Metadata.plainText(player.identity, 64) || Metadata.plainText(player.desktopEntry, 64) || "Music player")
+    : ""
+  // The local file being played (from xesam:url for other players), or "".
+  readonly property string playingPath: usingEngine ? engine.path
+    : player && player.metadata ? Paths.pathFromUrl(player.metadata["xesam:url"]) : ""
+
+  readonly property real length: usingEngine ? engine.length
+    : hasTrack && player.lengthSupported && isFinite(player.length) && player.length > 0 ? player.length : 0
   readonly property real position: {
+    if (usingEngine) return engine.position
     if (!hasTrack || !player.positionSupported) return 0
     var p = Number(player.position)
     if (!isFinite(p) || p < 0) return 0
     return length > 0 ? Math.min(p, length) : p
   }
 
-  readonly property bool shuffle: hasPlayer && player.shuffleSupported && player.shuffle
-  readonly property bool repeatOne: hasPlayer && player.loopSupported
-    && player.loopState === MprisLoopState.Track
-  // The player's own setting repeats the whole list (e.g. mpv loop-playlist).
-  readonly property bool loopsWholeList: hasPlayer && player.loopSupported
-    && player.loopState === MprisLoopState.Playlist
+  readonly property bool shuffle: usingEngine ? engine.shuffle : player !== null && player.shuffleSupported && player.shuffle
+  readonly property bool repeatOne: usingEngine ? engine.repeatOne
+    : player !== null && player.loopSupported && player.loopState === MprisLoopState.Track
+
+  // Cover art of Vinyl's track: the local file:// artUrl mpv-mpris reports
+  // for it (a cover image next to the file), when mpv-mpris is installed.
+  readonly property var engineTwin: {
+    if (engineBusName === "") return null
+    for (var i = 0; i < players.length; i++)
+      if (players[i] && String(players[i].dbusName) === engineBusName) return players[i]
+    return null
+  }
+  readonly property string engineArtUrl: engineTwin && urlPathOf(engineTwin) === engine.path && engine.path !== ""
+    ? Metadata.localArtUrl(engineTwin.trackArtUrl) : ""
 
   // ---------------------------------------------------------------- capabilities
-  readonly property bool canControl: hasPlayer && player.canControl
-  readonly property bool canTogglePlaying: canControl && hasTrack
-    && (player.isPlaying ? player.canPause : player.canPlay)
-  readonly property bool canGoNext: canControl && player.canGoNext
-  readonly property bool canGoPrevious: canControl && player.canGoPrevious
-  readonly property bool canSeek: canControl && hasTrack && player.canSeek && player.positionSupported && length > 0
-  readonly property bool canShuffle: canControl && player.shuffleSupported
-  readonly property bool canRepeat: canControl && player.loopSupported
+  readonly property bool canControl: usingEngine || player !== null && player.canControl
+  readonly property bool canTogglePlaying: usingEngine ? engine.hasTrack
+    : canControl && hasTrack && (player.isPlaying ? player.canPause : player.canPlay)
+  readonly property bool canGoNext: usingEngine ? engine.canGoNext : canControl && player.canGoNext
+  readonly property bool canGoPrevious: usingEngine ? engine.canGoPrevious : canControl && player.canGoPrevious
+  readonly property bool canSeek: usingEngine ? engine.canSeek
+    : canControl && hasTrack && player.canSeek && player.positionSupported && length > 0
+  readonly property bool canShuffle: usingEngine || canControl && player.shuffleSupported
+  readonly property bool canRepeat: usingEngine || canControl && player.loopSupported
 
   // ---------------------------------------------------------------- commands
-  // Sent only to the selected player, only when it supports them. The UI
-  // follows the player's reported state, never assumes success.
-  function togglePlaying() { if (canTogglePlaying) player.togglePlaying() }
-  function next() { if (canGoNext) player.next() }
-  function previous() { if (canGoPrevious) player.previous() }
+  // Sent only to what is shown, only when it supports them. The UI follows
+  // the reported state, never assumes success.
+  function togglePlaying() {
+    if (usingEngine) {
+      // A restored queue is checked against the library first.
+      if (!engine.trusted && !engine.live) checkSession(true)
+      else engine.togglePlaying()
+    } else if (canTogglePlaying) {
+      player.togglePlaying()
+    }
+  }
+  function next() {
+    if (usingEngine) engine.next()
+    else if (canGoNext) player.next()
+  }
+  function previous() {
+    if (usingEngine) engine.previous()
+    else if (canGoPrevious) player.previous()
+  }
   function seek(seconds) {
+    if (usingEngine) { engine.seek(seconds); return }
     if (!canSeek) return
     var s = Number(seconds)
     if (!isFinite(s)) return
     player.position = Math.max(0, Math.min(length, s))
   }
-  function setShuffle(on) { if (canShuffle) player.shuffle = !!on }
-  function setRepeatOne(on) { if (canRepeat) player.loopState = on ? MprisLoopState.Track : MprisLoopState.None }
+  function setShuffle(on) {
+    if (usingEngine) engine.setShuffle(on)
+    else if (canShuffle) player.shuffle = !!on
+  }
+  function setRepeatOne(on) {
+    if (usingEngine) engine.setRepeatOne(on)
+    else if (canRepeat) player.loopState = on ? MprisLoopState.Track : MprisLoopState.None
+  }
 
-  // ---------------------------------------------------------------- policy
+  // ---------------------------------------------------------------- other players: policy
   function playerKey(p) {
     if (!p) return ""
     return String(p.dbusName || p.desktopEntry || p.identity || "")
@@ -122,13 +185,25 @@ Item {
       .test(describe(p))
   }
 
-  // Library playback supports mpv (with mpv-mpris) only in this version.
   function isMpv(p) {
     return /\bmpv\b/.test(describe(p))
   }
 
+  function urlPathOf(p) {
+    return p && p.metadata ? Paths.pathFromUrl(p.metadata["xesam:url"]) : ""
+  }
+
+  // Vinyl's own mpv, by its bus name once known; until then (a moment after
+  // it starts), an mpv with no file yet or on the same file as Vinyl.
+  function isEngineTwin(p) {
+    if (!p || engine.pid === "") return false
+    if (engineBusName !== "") return String(p.dbusName) === engineBusName
+    var url = urlPathOf(p)
+    return isMpv(p) && (url === "" || url === engine.path)
+  }
+
   function isEligible(p) {
-    return !!p && !isProxy(p) && !isBrowser(p)
+    return !!p && !isProxy(p) && !isBrowser(p) && !isEngineTwin(p)
   }
 
   function hasMetadata(p) {
@@ -174,7 +249,11 @@ Item {
     Qt.callLater(root.refresh)
   }
 
-  onPlayersChanged: scheduleRefresh()
+  onPlayersChanged: {
+    scheduleRefresh()
+    if (engine.pid !== "" && engineBusName === "") busTimer.restart()
+  }
+  onEngineBusNameChanged: scheduleRefresh()
   Component.onCompleted: refresh()
 
   Instantiator {
@@ -189,11 +268,59 @@ Item {
         root.scheduleRefresh()
       }
       function onPlaybackStateChanged() { root.scheduleRefresh() }
-      function onPostTrackChanged() {
-        if (root.pendingStart && modelData === root.pendingStart.player) root.pendingStart.changed = true
-        root.scheduleRefresh()
-      }
+      function onPostTrackChanged() { root.scheduleRefresh() }
       function onIdentityChanged() { root.scheduleRefresh() }
+    }
+  }
+
+  Connections {
+    target: root.engine
+    function onIsPlayingChanged() {
+      if (!root.engine.isPlaying) return
+      root.lastPlayingKey = root.engineKey
+      root.queueError = ""
+    }
+    function onPathChanged() { root.scheduleRefresh() }
+    function onPidChanged() {
+      root.engineBusName = ""
+      root.busLookups = 0
+      if (root.engine.pid !== "") busTimer.restart()
+    }
+  }
+
+  // Which bus name belongs to Vinyl's mpv: `busctl --user list` shows each
+  // name's process id. Fixed arguments, no shell; at most a few times per
+  // mpv start (mpv-mpris registers a moment after mpv starts).
+  Timer {
+    id: busTimer
+    interval: 300
+    onTriggered: {
+      if (root.engine.pid === "" || root.engineBusName !== "" || busLookup.running || root.busLookups >= 5) return
+      root.busLookups++
+      busLookup.pid = root.engine.pid
+      busLookup.running = true
+    }
+  }
+
+  Process {
+    id: busLookup
+    property string pid: ""
+    command: ["/usr/bin/busctl", "--user", "--no-pager", "--json=short", "list"]
+    stdout: StdioCollector { id: busNames }
+    onExited: (code, status) => {
+      if (pid !== root.engine.pid) return
+      var list
+      try { list = JSON.parse(busNames.text) } catch (e) { list = null }
+      if (Array.isArray(list)) {
+        for (var i = 0; i < list.length; i++) {
+          var e = list[i]
+          if (e && String(e.pid) === pid && /^org\.mpris\.MediaPlayer2\./.test(String(e.name))) {
+            root.engineBusName = String(e.name)
+            return
+          }
+        }
+      }
+      if (root.busLookups < 5) busTimer.restart()
     }
   }
 
@@ -201,12 +328,13 @@ Item {
   // `position` when `positionChanged` is emitted. Refresh once when a card
   // opens, then tick once per second only while a card is visible and the
   // player is playing, so nothing runs while the card is closed or paused.
-  onOpenPopoversChanged: if (openPopovers > 0 && player) player.positionChanged()
+  // (Vinyl's own player keeps its position itself.)
+  onOpenPopoversChanged: if (openPopovers > 0 && player && !usingEngine) player.positionChanged()
 
   Timer {
     interval: 1000
     repeat: true
-    running: root.openPopovers > 0 && root.isPlaying && root.player !== null
+    running: root.openPopovers > 0 && !root.usingEngine && root.isPlaying && root.player !== null
       && root.player.positionSupported
     onTriggered: if (root.player) root.player.positionChanged()
   }
@@ -254,8 +382,8 @@ Item {
   }
 
   // What the Library window last found in the library folder: "unset",
-  // "unknown" (not listed yet), "ok", "empty" (no folders or audio files),
-  // or the listing's error ("missing", "notFolder", "permission",
+  // "unknown" (not scanned yet), "ok", "empty" (no audio files anywhere in
+  // it), or the scan's error ("missing", "notFolder", "permission",
   // "timedOut", "failed").
   property string libraryStatus: "unset"
   onLibraryRootChanged: libraryStatus = libraryRoot === "" ? "unset" : "unknown"
@@ -287,7 +415,9 @@ Item {
 
   property AudioLevels audio: AudioLevels {
     files: root.files
-    player: root.player
+    player: root.usingEngine ? null : root.player
+    processId: root.usingEngine ? root.engine.pid : ""
+    trackTitle: root.title
     playing: root.hasTrack && root.isPlaying
     viewed: root.audioViewers > 0
     mode: root.displayMode
@@ -340,123 +470,83 @@ Item {
     }
   }
 
-  // ---------------------------------------------------------------- playlists
-  property PrivateFiles files: PrivateFiles {}
-  property PlaylistStore store: PlaylistStore { files: root.files }
-
-  // ---------------------------------------------------------------- session queue (PLAN §2.6)
-  // { paths: [...], source: { kind: "folder"|"search"|"playlist", id, name } }
-  property var queue: null
+  // ---------------------------------------------------------------- playing from the library (PLAN §2.6)
+  // Vinyl's queue as the library shows it: { paths, source: { kind, id, name } }.
+  readonly property var queue: engine.hasTrack ? { paths: engine.paths, source: engine.source || { kind: "library", id: "", name: "Library" } } : null
+  readonly property int queueIndex: usingEngine && engine.hasTrack ? engine.index : -1
   property string queueError: ""
   property bool queueStarting: false
-  property var pendingStart: null
-  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
-  readonly property string queueDir: runtimeDir + "/vinyl"
-  readonly property string queueFile: queueDir + "/queue.m3u"
-  readonly property string emptyQueue: "#EXTM3U\n"
-
-  // The player library playback goes to: the selected one if it is mpv,
-  // else any running mpv; it must accept commands.
-  readonly property var libraryPlayer: {
-    if (player && isMpv(player) && player.canControl) return player
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
-      if (isEligible(p) && isMpv(p) && p.canControl) return p
-    }
-    return null
-  }
-
-  onLibraryPlayerChanged: if (libraryPlayer && queueError === "noPlayer") queueError = ""
-
-  readonly property int queueIndex: queue && playingPath !== "" ? queue.paths.indexOf(playingPath) : -1
-  onPlayingPathChanged: {
-    // The player moved to something that is not in Vinyl's queue: the queue
-    // was replaced elsewhere, so stop treating it as Vinyl's.
-    if (queue && !queueStarting && playingPath !== "" && queue.paths.indexOf(playingPath) === -1) queue = null
-  }
+  // What went wrong with library playback, for the library's notice.
+  readonly property string playbackError: queueError !== "" ? queueError : engine.error
 
   property PathValidator queueValidator: PathValidator {}
 
-  function shuffled(list) {
-    var a = list.slice()
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1))
-      var t = a[i]; a[i] = a[j]; a[j] = t
-    }
-    return a
-  }
-
-  // Plays `paths` (already in queue order: the chosen track first) through
-  // the library player. Every path is checked again first; missing or
-  // invalid ones are skipped, each file is queued once, at most 1,000.
-  function playFromLibrary(paths, source) {
-    var p = libraryPlayer
-    if (!p) { queueError = "noPlayer"; return }
-    if (queueStarting) return
+  // Plays `paths` (in queue order) from `paths[start]`. Every path is checked
+  // again first; missing or invalid ones are skipped, each file is queued
+  // once, at most 1,000 (from the chosen track on, when there are more).
+  function playFromLibrary(paths, start, source) {
+    if (queueStarting || paths.length === 0) return
+    var chosen = paths[Math.max(0, Math.min(paths.length - 1, start))]
     queueError = ""
     queueStarting = true
     queueValidator.validate(libraryRoot, paths, function(statuses) {
-      var ok = [], seen = {}
+      root.queueStarting = false
+      var ok = [], seen = {}, at = -1
       for (var i = 0; i < paths.length; i++) {
         if (statuses[i] !== "ok" || seen[paths[i]]) continue
         seen[paths[i]] = true
+        if (paths[i] === chosen) at = ok.length
         ok.push(paths[i])
       }
-      if (ok.length === 0) { root.failStart("None of these tracks can be played."); return }
-      if (ok.length > 1000) ok = ok.slice(0, 1000)
-      var restoreShuffle = p.shuffleSupported && p.shuffle
-      if (restoreShuffle) ok = [ok[0]].concat(root.shuffled(ok.slice(1)))
-      root.files.ensureDir(root.queueDir, function(dirOk, why) {
-        if (!dirOk) { root.failStart("Vinyl can't write its queue file. " + why); return }
-        root.files.writePrivate(root.queueFile, root.emptyQueue + ok.join("\n") + "\n", root.emptyQueue, function(written, why2) {
-          if (!written) { root.failStart("Vinyl can't write its queue file. " + why2); return }
-          if (!p || root.players.indexOf(p) === -1) { root.failStart("The player quit."); return }
-          // The player would otherwise reorder the list Vinyl already arranged.
-          if (restoreShuffle) p.shuffle = false
-          root.pendingStart = { player: p, paths: ok, source: source, restoreShuffle: restoreShuffle,
-                                before: root.urlPathOf(p), changed: false, started: Date.now() }
-          p.openUri(Paths.fileUrl(root.queueFile))
-          confirmTimer.restart()
-        })
-      })
+      if (at < 0) {
+        root.queueError = ok.length ? "“" + Paths.displayName(Paths.trackTitle(Paths.baseName(chosen))) + "” can't be played."
+                                    : "None of these tracks can be played."
+        return
+      }
+      if (ok.length > root.engine.maxQueue) {
+        ok = ok.slice(at, at + root.engine.maxQueue)
+        at = 0
+      }
+      root.lastPlayingKey = root.engineKey
+      root.engine.play(ok, at, source)
     })
   }
 
-  function urlPathOf(p) {
-    return p && p.metadata ? Paths.pathFromUrl(p.metadata["xesam:url"]) : ""
-  }
+  // ---------------------------------------------------------------- the restored session
+  // After a restart the saved queue is checked against the library rules
+  // (as every queue is), then loaded into Vinyl's player, paused where it
+  // was — so media keys work at once and play resumes right there. Tracks
+  // that are gone are dropped; if the current one is gone, the queue is.
+  property bool sessionPending: true
+  readonly property bool sessionReady: engine.restored && libraryRoot !== ""
+  onSessionReadyChanged: if (sessionReady && sessionPending) checkSession(false)
 
-  function failStart(message) {
-    queueStarting = false
-    queueError = message
-  }
-
-  // Confirms within about 3 s that the player is on the first queued file.
-  Timer {
-    id: confirmTimer
-    interval: 100
-    repeat: true
-    onTriggered: {
-      var s = root.pendingStart
-      if (!s) { stop(); return }
-      var gone = root.players.indexOf(s.player) === -1
-      var now = gone ? "" : root.urlPathOf(s.player)
-      var confirmed = !gone && now === s.paths[0] && (s.before !== s.paths[0] || s.changed)
-      if (!confirmed && !gone && Date.now() - s.started < 3000) return
-      stop()
-      root.pendingStart = null
-      if (!gone && s.restoreShuffle) s.player.shuffle = true
-      if (confirmed) {
-        root.queue = { paths: s.paths, source: s.source }
-        root.lastPlayingKey = root.playerKey(s.player)
-        root.player = s.player
-        root.queueError = ""
-      } else {
-        root.queueError = "The player couldn't open “" + Paths.displayName(Paths.baseName(s.paths[0])) + "”."
-      }
-      root.queueStarting = false
-      // The player has read the list; leave no paths behind.
-      root.files.writePrivate(root.queueFile, root.emptyQueue, root.emptyQueue, function() {})
+  function checkSession(play) {
+    sessionPending = false
+    if (!engine.hasTrack || engine.trusted || engine.loading) {
+      if (play) engine.togglePlaying()
+      return
     }
+    var list = engine.paths.slice()
+    var current = engine.path
+    queueValidator.validate(libraryRoot, list, function(statuses) {
+      // Something else started meanwhile: leave it.
+      if (root.engine.trusted || root.engine.path !== current) return
+      var ok = [], seen = {}
+      for (var i = 0; i < list.length; i++) {
+        if (statuses[i] !== "ok" || seen[list[i]]) continue
+        seen[list[i]] = true
+        ok.push(list[i])
+      }
+      var at = ok.indexOf(current)
+      if (at < 0) {
+        if (play) root.queueError = "“" + Paths.displayName(Paths.trackTitle(Paths.baseName(current))) + "” is no longer in your library."
+        root.engine.forget()
+        return
+      }
+      root.engine.adopt(ok, at)
+      if (play) root.engine.togglePlaying()
+      else root.engine.warmUp()
+    })
   }
 }

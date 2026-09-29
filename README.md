@@ -1,13 +1,16 @@
 # Vinyl
 
-A minimal local music player companion for [Omarchy](https://omarchy.org/).
-Vinyl puts what you're listening to in your bar, gives you a small
-mini-player to control it, and adds a music library window for browsing,
-searching, and playing a music folder you choose — with your own playlists.
+A minimal local music player for [Omarchy](https://omarchy.org/). Choose
+your music folder once, and every song in it — subfolders included — is in
+one list: click a song and it plays. Vinyl puts what you're listening to in
+your bar, gives you a small mini-player to control it, and remembers where
+you stopped, even after a restart.
 
-Vinyl doesn't play audio itself. It works with the music player you already
-use, through the standard MPRIS interface. It never goes online, never scans
-in the background, and never changes your music files.
+Vinyl plays music itself, with a hidden mpv it starts and stops on its own:
+there is nothing to run by hand and no player window. It also shows and
+controls other local music players (through the standard MPRIS interface)
+while they play. It never goes online, never scans in the background, and
+never changes your music files.
 
 ## Features
 
@@ -20,6 +23,7 @@ in the background, and never changes your music files.
   - **Pulse Dots**: a row of dots that follow how loud the music is.
 - Dimmed while paused. Hover for the full title and artist.
 - Right-click to pause or resume.
+- After a restart it shows the song you stopped on, paused where you left it.
 - Before you've chosen a music folder, it shows **Set up music library**.
 
 **Mini-player** (click Vinyl in the bar)
@@ -32,10 +36,14 @@ in the background, and never changes your music files.
 
 **Music Library**
 
-- Browse one music folder of your choice and its subfolders.
-- Search the whole folder by file or folder name.
-- Play a track, or play a whole folder, as a continuous queue: from the track
-  you pick to the end of the folder or search results.
+- Every song in your music folder and its subfolders, in one list, grouped
+  in blocks headed by each folder's path.
+- Click any song to play it. The rest of the list plays after it (and
+  **previous** goes back up the list), then playback stops.
+- Search the whole library by file or folder name.
+- Vinyl remembers the song, the queue, and the exact position. Pause, turn
+  the computer off, and the next day the song is waiting in the bar, paused
+  at the same spot — play continues right there, never from 0.
 - **Playlists:** collect tracks from anywhere in your library into named
   playlists. Create, rename, delete, add, remove, and reorder.
 - Playing a track from a playlist plays only that playlist: from the chosen
@@ -49,14 +57,18 @@ Omarchy's own panels.
 ## Requirements
 
 - **Omarchy** with its Quickshell-based shell (Omarchy 4 or newer).
-- For the mini-player: any MPRIS music player, such as mpv, MPD (with
-  mpDris2), or Strawberry. Web browsers are ignored on purpose.
-- For playing from the Music Library: **mpv** with the **mpv-mpris** plugin.
-  Install both with:
+- **mpv**, which plays the music, and **mpv-mpris**, which lets media keys
+  and Omarchy's media controls reach Vinyl. Omarchy installs both by
+  default; if you removed them:
 
   ```bash
   omarchy pkg add mpv mpv-mpris
   ```
+
+  Vinyl starts mpv itself, only while it has something to play, without a
+  window and without your own mpv settings (`mpv.conf` doesn't affect it).
+- Optional: the mini-player also shows other MPRIS music players, such as
+  MPD (with mpDris2) or Strawberry. Web browsers are ignored on purpose.
 
 - Optional, for the **Spectrum** bar display only: **cava**.
 
@@ -92,20 +104,15 @@ omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git -
 
 ## Getting started
 
-1. Start mpv so it waits for music to play:
-
-   ```bash
-   mpv --idle --force-window=no
-   ```
-
-   Vinyl never starts or stops a player for you.
-
-2. Click **Set up music library** in the bar, then the library button next
+1. Click **Set up music library** in the bar, then the library button next
    to the close button.
-3. Click **Choose Music Folder**, browse to your music, and click **Use this
-   folder**. Vinyl remembers it. (If the folder has no music Vinyl can play,
-   the library says so and lets you choose another one.)
-4. Double-click a track (or select it and press Enter) to play it.
+2. Click **Choose Music Folder**, browse to your music (for example
+   `~/Music`), and click **Use this folder**. Vinyl remembers it. (If the
+   folder has no music Vinyl can play, the library says so and lets you
+   choose another one.)
+3. Click any song to play it.
+
+That's all: there is no player to start.
 
 ## Bar display
 
@@ -127,12 +134,13 @@ other apps (see [Privacy](#privacy)).
 
 **Mouse**
 
-- Click a folder to open it; use the path at the top to go back.
-- Double-click a track to play from there.
-- **Play folder** plays the current folder from its first track.
+- Click a song to play it. Clicking the song that is playing doesn't
+  restart it.
+- **Change folder** (next to the folder's path at the top) picks another
+  music folder.
 - Hover a track and click its **+** button to add it to a playlist.
-- To add several tracks: click one, then **Ctrl-click** more (or
-  **Shift-click** for a range), and choose **Add to playlist**.
+- To add several tracks: **Ctrl-click** each one (this selects without
+  playing; **Shift-click** selects a range), and choose **Add to playlist**.
 - In a playlist, hover a track and click **−** to remove it, or use
   **Rename**, **Delete**, and **Play playlist** at the top.
 - Click the cog next to the close button for **Settings** (the bar display).
@@ -143,8 +151,8 @@ other apps (see [Privacy](#privacy)).
 | Key | Action |
 |---|---|
 | ↑ / ↓ | Move through the list |
-| Enter | Open a folder or play a track |
-| Backspace | Go up one folder |
+| Enter | Play the song (in the folder chooser: open the folder) |
+| Backspace | In the folder chooser: go up one folder |
 | / | Search |
 | Space | Select or unselect the track |
 | Shift + ↑ / ↓ | Extend the selection |
@@ -175,6 +183,11 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
   (or `$XDG_DATA_HOME/vinyl/playlists.json`). The folder and file are
   private to your user. Limits: 100 playlists, 1,000 tracks per playlist,
   and 16 MB for the file.
+- **Where you stopped** (the queue, the song, its position, shuffle and
+  repeat) is saved in `session.json` in the same private folder: on every
+  pause, seek, and song change, and every 5 seconds while playing. A queue
+  holds up to 1,000 songs.
+- The library lists up to 20,000 songs, 8 folder levels deep.
 
 Supported audio files: mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff,
 wv, ape, wma, and mka. Hidden files and folders are not shown. Links
@@ -183,14 +196,14 @@ anything outside the folder you chose.
 
 ## Troubleshooting
 
-**"No compatible player is running"**
-Start mpv with `mpv --idle --force-window=no`, and make sure `mpv-mpris` is
-installed. Library playback works with mpv only.
+**"Vinyl needs mpv to play music"**
+mpv isn't installed. Install it with `omarchy pkg add mpv mpv-mpris`, then
+click the song again.
 
-**The library plays the whole list again after the last track**
-mpv's own "loop playlist" setting is on (for example `loop-playlist` in
-`~/.config/mpv/mpv.conf`). Vinyl shows a notice but doesn't change your mpv
-settings.
+**Media keys don't pause Vinyl**
+They reach Vinyl through mpv-mpris: install it with
+`omarchy pkg add mpv-mpris`. The bar's right click and the mini-player work
+without it.
 
 **"Playlists couldn't be read"**
 The playlists file is damaged, larger than 16 MB, or from a newer version of
@@ -244,16 +257,17 @@ so Vinyl shows its music note in every mode.
 omarchy plugin remove community.shoxjaxon.vinyl
 ```
 
-Your playlists stay in `~/.local/share/vinyl/`. Delete that folder if you
-don't need them anymore.
+Your playlists and the saved session stay in `~/.local/share/vinyl/`.
+Delete that folder if you don't need them anymore.
 
 ## Privacy
 
-Vinyl needs no network access and sends nothing anywhere. It reads only your
-chosen music folder and its own playlists file, and writes only its
-playlists file, a temporary queue file in your private runtime folder
-(emptied as soon as mpv has loaded it), and its settings entry in
-`shell.json`.
+Vinyl needs no network access and sends nothing anywhere; its mpv plays
+local files only (online streaming is turned off). It reads only your chosen
+music folder and its own files, and writes only its playlists file, its
+session file, a temporary queue file and mpv's control socket in your
+private runtime folder (the queue file is emptied as soon as mpv has loaded
+it), and its settings entry in `shell.json`.
 
 With **Spectrum** or **Pulse Dots** selected, and only while music plays,
 Vinyl also reads the sound level of your music player's own output — never

@@ -16,7 +16,7 @@ Item {
   property string cover: ""
   property string position: ""
   property string player: ""
-  property string idleDetail: "Choose a track and press Enter to play it"
+  property string idleDetail: "Click a song to play it"
 
   implicitHeight: Style.space(52)
 

@@ -3,8 +3,10 @@ import qs.Commons
 import "../components"
 import qs.Ui
 
-// One list row: a section header, a folder, or a track (optionally with its
-// location, for search results and playlists). Omarchy list conventions:
+// One list row: a section header, a folder block's heading (the folder's
+// path and its song count), a folder (in the folder chooser), or a track
+// (optionally with its location, for search results and playlists). A click
+// plays a track; Ctrl- or Shift-click selects it. Omarchy list conventions:
 // hover/cursor use the hover fill; selected tracks use the selection fill
 // with a check; the playing track is the "current" item (selected fill and
 // accent text).
@@ -16,7 +18,6 @@ Item {
   property bool cursor: false
   property bool playing: false
   property bool selected: false
-  property bool dimmed: false
   // Hover action for tracks: "add" (add to playlist), "remove" (from this
   // playlist), or "" for none.
   property string action: ""
@@ -25,7 +26,9 @@ Item {
   signal activated()
   signal actionRequested()
 
-  readonly property bool isHeader: row.kind === "header"
+  readonly property bool isGroup: row.kind === "group"
+  // Headings of either kind: part of the list, never a target.
+  readonly property bool isHeader: row.kind === "header" || isGroup
   readonly property bool isTrack: row.kind === "track"
   // Unavailable tracks (a playlist entry that is missing, outside this
   // library, or otherwise invalid) are dimmed, labelled, and never played.
@@ -41,18 +44,62 @@ Item {
     : (hot || cursor) && !missing ? "play"
     : "number"
 
-  height: isHeader ? Style.space(26) : Style.spacing.popupRowHeight + Style.spacing.sm
+  height: isGroup ? Style.space(34) : isHeader ? Style.space(26) : Style.spacing.popupRowHeight + Style.spacing.sm
 
   PanelSectionHeader {
-    visible: root.isHeader
+    visible: root.isHeader && !root.isGroup
     anchors.left: parent.left
     anchors.leftMargin: Style.spacing.xs
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.spacing.xs
     foreground: theme.textPrimary
-    text: root.isHeader
+    text: root.isHeader && !root.isGroup
       ? root.row.label.toUpperCase() + "  ·  " + String(root.row.count).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
       : ""
+  }
+
+  // A folder block's heading: the folder's path below the library folder.
+  Item {
+    visible: root.isGroup
+    anchors.fill: parent
+    anchors.leftMargin: Style.spacing.xs
+    anchors.rightMargin: Style.spacing.rowPaddingX
+
+    Icon {
+      id: groupIcon
+      anchors.bottom: parent.bottom
+      anchors.bottomMargin: Style.spacing.xs
+      name: "folder"
+      size: Style.font.iconLarge
+      color: theme.textSecondary
+    }
+
+    Text {
+      id: groupLabel
+      anchors.left: groupIcon.right
+      anchors.leftMargin: Style.spacing.sm
+      anchors.verticalCenter: groupIcon.verticalCenter
+      width: Math.min(implicitWidth, parent.width - groupIcon.width - Style.spacing.sm - groupCount.implicitWidth - Style.spacing.lg)
+      text: root.isGroup ? root.row.label : ""
+      textFormat: Text.PlainText
+      color: theme.textPrimary
+      font.family: theme.fontFamily
+      font.pixelSize: theme.fontSmall
+      font.bold: true
+      elide: Text.ElideMiddle
+    }
+
+    Text {
+      id: groupCount
+      anchors.left: groupLabel.right
+      anchors.leftMargin: Style.spacing.lg
+      anchors.verticalCenter: groupIcon.verticalCenter
+      text: root.isGroup ? String(root.row.count).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (root.row.count === 1 ? " song" : " songs") : ""
+      textFormat: Text.PlainText
+      color: theme.textMuted
+      font.family: theme.fontFamily
+      font.pixelSize: theme.fontCaption
+    }
   }
 
   Rectangle {
@@ -75,9 +122,9 @@ Item {
     enabled: !root.isHeader
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    onClicked: (event) => root.row.kind === "folder" ? root.activated() : root.picked(event.modifiers)
-    onDoubleClicked: (event) => {
-      if (root.isTrack && !(event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) root.activated()
+    onClicked: (event) => {
+      if (root.isTrack && (event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) root.picked(event.modifiers)
+      else root.activated()
     }
 
     // Row content lives inside the MouseArea so hovering the row's own
@@ -87,7 +134,7 @@ Item {
       anchors.leftMargin: Style.spacing.rowPaddingX
       anchors.rightMargin: Style.spacing.rowPaddingX
       visible: !root.isHeader
-      opacity: root.dimmed || root.missing ? 0.5 : 1
+      opacity: root.missing ? 0.5 : 1
 
       Item {
         id: lead

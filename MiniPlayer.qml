@@ -30,7 +30,7 @@ GlassSurface {
     : (root.info.title || "Unknown track")
   readonly property string artistText: !root.info.hasTrack
     ? (root.info.needsLibrarySetup ? "Set up your music library with the library button above"
-                                   : "Play something in your music player")
+                                   : "Open the library and click a song")
     : (root.info.artist || "Unknown artist")
 
   width: theme.cardWidth
