@@ -55,8 +55,11 @@ QtObject {
   // ---------------------------------------------------------------- the player's stream
   // Output streams (applications playing audio), bound only while needed so
   // their properties (application name, process id, serial) can be read.
+  // Quickshell marks a playback stream `isSink` (it sends audio into a sink;
+  // Omarchy's media service reads it the same way); recording streams are
+  // never used.
   readonly property var outputStreams: wantStream && Pipewire.ready
-    ? Pipewire.nodes.values.filter(function(n) { return n && n.isStream && !n.isSink }) : []
+    ? Pipewire.nodes.values.filter(function(n) { return n && n.isStream && n.isSink }) : []
   property PwObjectTracker tracker: PwObjectTracker { objects: root.outputStreams }
 
   readonly property var playerIds: processId !== ""
