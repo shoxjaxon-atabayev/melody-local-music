@@ -296,11 +296,25 @@ PanelWindow {
   }
 
   // ---------------------------------------------------------------- open / close
+  // The mini-player's setup card asks for the folder chooser; the window
+  // may already be open.
+  function takeChooserRequest() {
+    if (!service.chooserRequested) return
+    service.chooserRequested = false
+    openChooser()
+  }
+
+  Connections {
+    target: win.service
+    function onChooserRequestedChanged() { if (win.open) win.takeChooserRequest() }
+  }
+
   onOpenChanged: {
     focusPrimeTimer.stop()
     focusPrimed = false
     if (open) {
       resetSession()
+      takeChooserRequest()
       beginFocusPrime()
       list.forceActiveFocus()
     } else {

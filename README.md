@@ -34,6 +34,8 @@ never changes your music files.
 - A progress bar you can click or drag to seek.
 - Controls your player doesn't support are shown disabled.
 - A library button that opens the Music Library.
+- The first time, it sets Vinyl up: it installs anything Vinyl needs that's
+  missing, then has you choose your music folder.
 
 **Music Library**
 
@@ -77,6 +79,10 @@ Omarchy's own panels.
   omarchy pkg add cava
   ```
 
+You don't have to install these by hand: the first time you open the
+mini-player, Vinyl lists whichever of mpv, mpv-mpris, and cava are missing
+and installs them with one click (see [Getting started](#getting-started)).
+
 ## Installation
 
 1. Add the plugin:
@@ -105,13 +111,17 @@ omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git -
 
 ## Getting started
 
-1. Click **Set up music library** in the bar, then the library button next
-   to the close button.
-2. Click **Choose Music Folder**, browse to your music (for example
-   `~/Music`), and click **Use this folder**. Vinyl remembers it. (If the
-   folder has no music Vinyl can play, the library says so and lets you
-   choose another one.)
-3. Click any song to play it.
+1. Click **Set up music library** in the bar.
+2. If something Vinyl needs is missing, the mini-player lists it. Click
+   **Install**: Omarchy's terminal opens, asks for your password, and
+   installs it (`omarchy pkg add`). The mini-player moves on by itself when
+   it's done; if the install doesn't finish, click **Try Again**.
+3. Click **Choose Music Folder**. The Music Library opens on the folder
+   chooser: browse to your music (for example `~/Music`) and click **Use
+   this folder**. Vinyl remembers it. (If the folder has no music Vinyl can
+   play, the mini-player and the library say so and let you choose another
+   one.)
+4. Click any song to play it.
 
 That's all: there is no player to start.
 
@@ -198,8 +208,15 @@ anything outside the folder you chose.
 ## Troubleshooting
 
 **"Vinyl needs mpv to play music"**
-mpv isn't installed. Install it with `omarchy pkg add mpv mpv-mpris`, then
-click the song again.
+mpv isn't installed. Click Vinyl in the bar and then **Install**, or run
+`omarchy pkg add mpv mpv-mpris`, then click the song again.
+
+**Install doesn't open a terminal, or says it didn't finish**
+Vinyl runs `omarchy pkg add` in Omarchy's floating terminal
+(`omarchy-launch-floating-terminal-with-presentation`). If the terminal
+doesn't open within 20 seconds, or it closes before everything is
+installed, the mini-player shows **Try Again**. You can also install the
+packages yourself: `omarchy pkg add mpv mpv-mpris cava`.
 
 **Media keys don't pause Vinyl**
 They reach Vinyl through mpv-mpris: install it with
@@ -268,7 +285,11 @@ local files only (online streaming is turned off). It reads only your chosen
 music folder and its own files, and writes only its playlists file, its
 session file, a temporary queue file and mpv's control socket in your
 private runtime folder (the queue file is emptied as soon as mpv has loaded
-it), and its settings entry in `shell.json`.
+it), and its settings entry in `shell.json`. The one exception is the
+setup's **Install** button: only when you click it, Omarchy's package
+installer downloads the missing packages from the Arch repositories, and
+Vinyl follows the install through a small marker file in your private
+runtime folder, deleted when it's done.
 
 With **Spectrum** or **Pulse Dots** selected, and only while music plays,
 Vinyl also reads the sound level of your music player's own output — never

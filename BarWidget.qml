@@ -140,6 +140,8 @@ BarWidget {
   readonly property string tooltip: {
     if (!service) return "Vinyl"
     if (!hasTrack) {
+      if (service.needsSetup && service.requirements.missing.length)
+        return "Vinyl — click to install what it needs (" + service.requirements.missing.join(", ") + ")"
       if (!service.needsLibrarySetup) return "Vinyl — nothing playing"
       if (service.libraryRoot === "") return "Vinyl — choose a music folder in the library"
       if (service.libraryStatus === "empty") return "Vinyl — your music folder has no music to play"

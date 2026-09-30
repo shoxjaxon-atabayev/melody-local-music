@@ -192,6 +192,11 @@ PanelWindow {
         root.closeRequested()
         if (root.service) root.service.openLibrary()
       }
+      // The setup card's folder step: the library on its folder chooser.
+      onFolderRequested: {
+        root.closeRequested()
+        if (root.service) root.service.chooseLibraryFolder()
+      }
     }
   }
 }

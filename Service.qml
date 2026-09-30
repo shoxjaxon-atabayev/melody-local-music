@@ -329,7 +329,12 @@ Item {
   // opens, then tick once per second only while a card is visible and the
   // player is playing, so nothing runs while the card is closed or paused.
   // (Vinyl's own player keeps its position itself.)
-  onOpenPopoversChanged: if (openPopovers > 0 && player && !usingEngine) player.positionChanged()
+  onOpenPopoversChanged: {
+    if (openPopovers > 0 && player && !usingEngine) player.positionChanged()
+    // A card opening with nothing playing checks again, so packages
+    // installed or removed elsewhere count.
+    if (openPopovers > 0 && !hasTrack && !requirements.installing) requirements.check()
+  }
 
   Timer {
     interval: 1000
@@ -391,6 +396,30 @@ Item {
   readonly property bool needsLibrarySetup: libraryRoot === ""
     || ["empty", "missing", "notFolder", "permission"].indexOf(libraryStatus) !== -1
 
+  // ---------------------------------------------------------------- setup
+  // What Vinyl runs, and its one-click install (core/Requirements.qml).
+  property Requirements requirements: Requirements {
+    mpvBinary: root.engine.mpvBinary
+    mprisScript: root.engine.mprisScript
+    cavaBinary: root.audio.cavaBinary
+    // A cava found missing earlier is looked for again.
+    onInstalled: if (root.displayMode === BarDisplay.SPECTRUM) root.audio.checkCava()
+  }
+
+  // While nothing plays, the mini-player shows the setup steps in place of
+  // the player: install what's missing, then choose the music folder. Also
+  // later whenever mpv is missing, as nothing plays without it.
+  readonly property bool needsSetup: !hasTrack
+    && (needsLibrarySetup || requirements.missing.indexOf("mpv") !== -1)
+
+  // Playback found mpv missing: the setup card offers to install it.
+  Connections {
+    target: root.engine
+    function onMpvMissingChanged() {
+      if (root.engine.mpvMissing && !root.requirements.installing) root.requirements.check()
+    }
+  }
+
   // ---------------------------------------------------------------- bar display
   // "trackInfo" (the default), "spectrum", or "pulseDots". A missing or
   // unknown saved value means Track Info. A choice applies at once; it is
@@ -443,6 +472,15 @@ Item {
   function closeLibrary() {
     if (!libraryOpen) return
     libraryOpen = false
+  }
+
+  // Set by the setup card's Choose Music Folder: the library opens on its
+  // folder chooser instead of the list.
+  property bool chooserRequested: false
+
+  function chooseLibraryFolder() {
+    chooserRequested = true
+    openLibrary()
   }
 
   // From the mini-player: through the shell when possible, so its panel

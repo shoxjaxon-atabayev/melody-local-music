@@ -5,8 +5,10 @@ import "components"
 // The Vinyl mini-player card: header (with the Music Library button),
 // artwork with track info, progress, and playback controls. Driven by the
 // plugin service; each control is enabled only when the selected player
-// supports it, and shows the player's reported state. Styling comes from
-// Omarchy's system values via `theme` (core/Theme.qml).
+// supports it, and shows the player's reported state. Until Vinyl can play
+// (first run, or mpv missing) the setup steps take the player's place, at
+// the same card size. Styling comes from Omarchy's system values via
+// `theme` (core/Theme.qml).
 GlassSurface {
   id: root
 
@@ -23,14 +25,15 @@ GlassSurface {
 
   signal closeRequested()
   signal libraryRequested()
+  signal folderRequested()
+
+  readonly property bool setupMode: !!service && service.needsSetup
 
   readonly property string statusText: !root.info.hasTrack ? ""
     : root.info.isPlaying ? "NOW PLAYING" : "PAUSED"
   readonly property string titleText: !root.info.hasTrack ? "Nothing playing"
     : (root.info.title || "Unknown track")
-  readonly property string artistText: !root.info.hasTrack
-    ? (root.info.needsLibrarySetup ? "Set up your music library with the library button above"
-                                   : "Open the library and click a song")
+  readonly property string artistText: !root.info.hasTrack ? "Open the library and click a song"
     : (root.info.artist || "Unknown artist")
 
   width: theme.cardWidth
@@ -113,8 +116,10 @@ GlassSurface {
 
     // ---------------------------------------------------------------- hero
     Item {
+      id: hero
       width: parent.width
       height: theme.artworkSize
+      opacity: root.setupMode ? 0 : 1
 
       Artwork {
         id: artwork
@@ -187,6 +192,7 @@ GlassSurface {
     ProgressBar {
       theme: root.theme
       width: parent.width
+      opacity: root.setupMode ? 0 : 1
       position: root.info.position
       length: root.info.length
       hasPosition: root.info.hasTrack
@@ -201,6 +207,7 @@ GlassSurface {
     PlaybackControls {
       theme: root.theme
       anchors.horizontalCenter: parent.horizontalCenter
+      opacity: root.setupMode ? 0 : 1
       playing: root.info.isPlaying
       shuffle: root.info.shuffle
       repeatOne: root.info.repeatOne
@@ -248,5 +255,19 @@ GlassSurface {
         font.pixelSize: theme.fontCaption
       }
     }
+  }
+
+  // ---------------------------------------------------------------- setup
+  // Over the player's area (hero down to the footer), which it hides.
+  SetupSteps {
+    objectName: "setupSteps"
+    theme: root.theme
+    service: root.service
+    visible: root.setupMode
+    x: content.x
+    y: content.y + hero.y
+    width: content.width
+    height: content.height - hero.y
+    onFolderRequested: root.folderRequested()
   }
 }
