@@ -269,5 +269,7 @@ GlassSurface {
     width: content.width
     height: content.height - hero.y
     onFolderRequested: root.folderRequested()
+    // The terminal takes over; the card closes out of its way.
+    onInstallStarted: root.closeRequested()
   }
 }

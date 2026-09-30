@@ -7,8 +7,9 @@ import "../core/Paths.js" as Paths
 // The mini-player's setup steps, shown in place of the player while Melody
 // can't play yet: first install what Melody runs, when something is missing
 // (a warning, the missing packages, and Install), then choose the music
-// folder. The install runs in Omarchy's terminal (core/Requirements.qml);
-// this view follows it and moves on to the folder step by itself.
+// folder. The install runs in Omarchy's terminal (core/Requirements.qml),
+// and the card closes so the terminal is in view; this view follows the
+// install and shows the folder step (or Try Again) when it is opened again.
 Item {
   id: root
 
@@ -16,6 +17,8 @@ Item {
   required property var service
 
   signal folderRequested()
+  // Install started its terminal.
+  signal installStarted()
 
   readonly property var requirements: service ? service.requirements : null
   readonly property var missing: requirements ? requirements.missing : []
@@ -171,8 +174,9 @@ Item {
       foreground: theme.textPrimary
       enabled: !root.installing
       onClicked: {
-        if (root.installStep) root.requirements.install()
-        else root.folderRequested()
+        if (!root.installStep) { root.folderRequested(); return }
+        root.requirements.install()
+        if (root.requirements.installing) root.installStarted()
       }
     }
   }
