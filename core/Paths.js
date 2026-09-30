@@ -3,7 +3,7 @@
 // Path and file-name helpers for the Music Library. Pure functions: nothing
 // here touches the filesystem. File and folder names are untrusted text.
 
-// Audio files Vinyl lists, by extension (case-insensitive).
+// Audio files Melody lists, by extension (case-insensitive).
 var AUDIO_EXTENSIONS = ["mp3", "flac", "ogg", "oga", "opus", "m4a", "aac", "wav",
                         "aif", "aiff", "wv", "ape", "wma", "mka"]
 var AUDIO_RE = /\.(mp3|flac|ogg|oga|opus|m4a|aac|wav|aif|aiff|wv|ape|wma|mka)$/i

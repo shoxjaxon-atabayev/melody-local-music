@@ -4,7 +4,7 @@ import "../components"
 import qs.Ui
 
 // Bottom strip: the player's current track (from its metadata) and where it
-// sits in Vinyl's session queue. Informational; playback controls stay in the
+// sits in Melody's session queue. Informational; playback controls stay in the
 // mini-player.
 Item {
   id: root

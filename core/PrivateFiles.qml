@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Private files for Vinyl's own data (the playlists file and the temporary
+// Private files for Melody's own data (the playlists file and the temporary
 // queue file). Quickshell's FileView writes atomically but cannot set file
 // modes and would write through a symlink, so every operation here:
 //   - inspects the path first with `find -P` (never follows a symlink) and

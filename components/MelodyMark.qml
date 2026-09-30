@@ -1,7 +1,7 @@
 import QtQuick
 import qs.Commons
 
-// Vinyl's app mark: an accent tile with three static level bars, using the
+// Melody's app mark: an accent tile with three static level bars, using the
 // theme's accent and background and Omarchy's small-tile radius.
 Rectangle {
   id: root

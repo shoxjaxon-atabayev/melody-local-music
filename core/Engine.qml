@@ -1,14 +1,14 @@
 import QtQuick
 import Quickshell.Io
 
-// Vinyl's own player (owner decision 2026-09-29). Vinyl plays music itself:
+// Melody's own player (owner decision 2026-09-29). Melody plays music itself:
 // one headless mpv that it starts when there is something to play and
-// controls over mpv's JSON IPC socket in Vinyl's private runtime folder.
+// controls over mpv's JSON IPC socket in Melody's private runtime folder.
 // Nothing needs to be started by hand, and no player window ever opens:
 // no video (cover art is never shown as a picture), no terminal, and none
 // of the user's mpv configuration or scripts, so mpv.conf can't change how
-// Vinyl plays. mpv-mpris is loaded when installed, so media keys and
-// Omarchy's media controls reach Vinyl too.
+// Melody plays. mpv-mpris is loaded when installed, so media keys and
+// Omarchy's media controls reach Melody too.
 //
 // The queue, the current track, its position, shuffle, and repeat are saved
 // in session.json next to the playlists file (private, 0700/0600): on every
@@ -25,9 +25,9 @@ QtObject {
   id: root
 
   required property PrivateFiles files
-  // $XDG_RUNTIME_DIR/vinyl (0700): the IPC socket and the temporary queue file.
+  // $XDG_RUNTIME_DIR/melody (0700): the IPC socket and the temporary queue file.
   property string runtimeFolder: ""
-  // $XDG_DATA_HOME/vinyl (0700): the saved session.
+  // $XDG_DATA_HOME/melody (0700): the saved session.
   property string dataFolder: ""
   property string mpvBinary: "/usr/bin/mpv"
   // mpv-mpris; mpv carries on without it when it isn't installed.
@@ -37,8 +37,8 @@ QtObject {
 
   readonly property int maxQueue: 1000
   // The name mpv plays under (PipeWire application and node name); the bar's
-  // visualizations find Vinyl's audio stream by it.
-  readonly property string clientName: "Vinyl"
+  // visualizations find Melody's audio stream by it.
+  readonly property string clientName: "Melody"
   readonly property string socketPath: runtimeFolder + "/mpv.sock"
   readonly property string listFile: runtimeFolder + "/queue.m3u"
   readonly property string emptyList: "#EXTM3U\n"
@@ -278,7 +278,7 @@ QtObject {
     loaded = false
     pendingStart = null
     paused = true
-    error = why || "Vinyl couldn't start playback."
+    error = why || "Melody couldn't start playback."
   }
 
   property Timer loadTimeout: Timer {
@@ -290,9 +290,9 @@ QtObject {
   // mpv has read it.
   function writeList(list, callback) {
     files.ensureDir(runtimeFolder, function(dirOk, why) {
-      if (!dirOk) { callback(false, "Vinyl can't write its queue file. " + why); return }
+      if (!dirOk) { callback(false, "Melody can't write its queue file. " + why); return }
       root.files.writePrivate(root.listFile, root.emptyList + list.join("\n") + "\n", root.emptyList, function(ok, why2) {
-        callback(ok, ok ? "" : "Vinyl can't write its queue file. " + why2)
+        callback(ok, ok ? "" : "Melody can't write its queue file. " + why2)
       })
     })
   }
@@ -359,7 +359,7 @@ QtObject {
       "--audio-display=no",
       "--ytdl=no",                    // local files only, never online
       "--load-scripts=no",
-      "--resume-playback=no",         // Vinyl keeps positions itself
+      "--resume-playback=no",         // Melody keeps positions itself
       "--save-position-on-quit=no",
       "--audio-client-name=" + clientName,
       "--input-ipc-server=" + socketPath]
@@ -374,7 +374,7 @@ QtObject {
     if (starting) return
     starting = true
     files.ensureDir(runtimeFolder, function(ok, why) {
-      if (!ok) { root.startFailed("Vinyl can't use its private runtime folder. " + why, false); return }
+      if (!ok) { root.startFailed("Melody can't use its private runtime folder. " + why, false); return }
       root.quitStale(function() {
         root.procStarted = false
         root.proc.command = root.mpvCommand()
@@ -384,7 +384,7 @@ QtObject {
   }
 
   // An mpv left behind by a shell that didn't exit cleanly (a crash) still
-  // listens on Vinyl's socket and may still be playing: ask it to quit
+  // listens on Melody's socket and may still be playing: ask it to quit
   // before starting a new one. `then` runs once nothing answers there.
   property Component probeComponent: Component { Socket {} }
   property var staleDone: null
@@ -442,7 +442,7 @@ QtObject {
     onExited: (code, status) => root.processGone(code)
   }
 
-  readonly property string missingText: "Vinyl plays music with mpv, which isn't installed."
+  readonly property string missingText: "Melody plays music with mpv, which isn't installed."
 
   // mpv quit or crashed: back to cold, keeping the queue and position, so
   // the next play starts mpv again and resumes there. (127: setpriv found
@@ -512,7 +512,7 @@ QtObject {
     Qt.callLater(function() { s.destroy() })
     if (!proc.running || ipc) return
     if (connectTries >= 60) {
-      startFailed("Vinyl couldn't connect to mpv.", false)
+      startFailed("Melody couldn't connect to mpv.", false)
       proc.running = false
       return
     }
@@ -704,7 +704,7 @@ QtObject {
       if (root.saveAgain) { root.saveAgain = false; root.saveNow() }
     }
     function fail(why) {
-      console.warn("Vinyl: can't save the playback session: " + why)
+      console.warn("Melody: can't save the playback session: " + why)
       done(false)
     }
     // One look at the folder and the file (never through a symlink). Both
@@ -731,7 +731,7 @@ QtObject {
         // Something started while the file was read: that wins.
         if (!root.hasTrack) root.applySession(r.text)
       } else if (r.state !== "absent") {
-        console.warn("Vinyl: the saved playback session can't be read: " + (r.reason || r.state))
+        console.warn("Melody: the saved playback session can't be read: " + (r.reason || r.state))
       }
       root.restored = true
     })

@@ -2,8 +2,8 @@ import QtQuick
 
 // Omarchy "panel" entry for the Music Library. It lets the shell open and
 // close the library, for example from a keyboard shortcut:
-//   omarchy-shell shell toggle community.shoxjaxon.vinyl '{}'
-// The window itself belongs to Vinyl's service, so it keeps its state and
+//   omarchy-shell shell toggle community.shoxjaxon.melody '{}'
+// The window itself belongs to Melody's service, so it keeps its state and
 // its close fade after the shell unloads this entry.
 Item {
   id: root

@@ -1,4 +1,4 @@
-# Vinyl is installed as a plain git checkout of this repository, so only the
+# Melody is installed as a plain git checkout of this repository, so only the
 # files the plugin needs at runtime (and user documentation) are tracked.
 
 # Development-only material (kept locally, never published)

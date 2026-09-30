@@ -8,10 +8,10 @@ import "core/BarDisplay.js" as BarDisplay
 import "core/Metadata.js" as Metadata
 import "core/Paths.js" as Paths
 
-// Vinyl's shared state. The shell creates one instance for all monitors; bar
+// Melody's shared state. The shell creates one instance for all monitors; bar
 // widgets reach it through `bar.shell.serviceFor(id)`.
 //
-// Music from the library plays in Vinyl's own player (core/Engine.qml): no
+// Music from the library plays in Melody's own player (core/Engine.qml): no
 // player needs to be started by hand, and no player window opens. The bar
 // and the mini-player show that player, or another local MPRIS player while
 // it is the one playing. They get sanitized properties and send commands to
@@ -20,12 +20,12 @@ import "core/Paths.js" as Paths
 // mode, and the audio levels behind the bar's visualizations.
 //
 // What is shown (predictable, sticky):
-//   - Vinyl's player while it plays;
+//   - Melody's player while it plays;
 //   - otherwise another player that is playing (see below);
-//   - otherwise Vinyl's player if it has a track (paused, or restored after
+//   - otherwise Melody's player if it has a track (paused, or restored after
 //     a restart), unless another player was the last one playing.
 // Other players: skip playerctld (a proxy that mirrors other players), web
-// browsers, and Vinyl's own mpv (seen over MPRIS through mpv-mpris). A
+// browsers, and Melody's own mpv (seen over MPRIS through mpv-mpris). A
 // playing player wins; the current choice is kept while it still plays;
 // otherwise the most recently playing one, then local music players (mpv,
 // MPD, …) before others. With nothing playing, keep the current choice while
@@ -38,7 +38,7 @@ Item {
   // Injected by the shell (capability-scoped to this plugin).
   property var shell: null
   property var manifest: null
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "community.shoxjaxon.vinyl"
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "community.shoxjaxon.melody"
 
   // Open popovers across monitors; position polling runs only while > 0.
   property int openPopovers: 0
@@ -48,7 +48,7 @@ Item {
   property PlaylistStore store: PlaylistStore { files: root.files }
 
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
-  readonly property string queueDir: runtimeDir !== "" ? runtimeDir + "/vinyl" : ""
+  readonly property string queueDir: runtimeDir !== "" ? runtimeDir + "/melody" : ""
 
   property Engine engine: Engine {
     files: root.files
@@ -56,14 +56,14 @@ Item {
     dataFolder: root.store.dir
   }
 
-  readonly property string engineKey: "vinyl"
+  readonly property string engineKey: "melody"
 
   // ---------------------------------------------------------------- other players
   readonly property var players: Mpris.players ? Mpris.players.values : []
   property MprisPlayer player: null
   property string lastPlayingKey: ""
 
-  // Vinyl's own mpv on D-Bus (mpv-mpris), found by its process id.
+  // Melody's own mpv on D-Bus (mpv-mpris), found by its process id.
   property string engineBusName: ""
   property int busLookups: 0
 
@@ -86,7 +86,7 @@ Item {
     : player ? Metadata.artUrl(player.trackArtUrl) : ""
   readonly property bool hasTrack: usingEngine || player !== null
     && (title !== "" || artist !== "" || player.playbackState !== MprisPlaybackState.Stopped)
-  readonly property string playerName: usingEngine ? "Vinyl"
+  readonly property string playerName: usingEngine ? "Melody"
     : player ? (Metadata.plainText(player.identity, 64) || Metadata.plainText(player.desktopEntry, 64) || "Music player")
     : ""
   // The local file being played (from xesam:url for other players), or "".
@@ -107,7 +107,7 @@ Item {
   readonly property bool repeatOne: usingEngine ? engine.repeatOne
     : player !== null && player.loopSupported && player.loopState === MprisLoopState.Track
 
-  // Cover art of Vinyl's track, as mpv-mpris reports it (when installed):
+  // Cover art of Melody's track, as mpv-mpris reports it (when installed):
   // the image embedded in the file, or a cover image next to it
   // (cover.jpg, front.png, Folder.jpg, …).
   readonly property var engineTwin: {
@@ -198,8 +198,8 @@ Item {
     return p && p.metadata ? Paths.pathFromUrl(p.metadata["xesam:url"]) : ""
   }
 
-  // Vinyl's own mpv, by its bus name once known; until then (a moment after
-  // it starts), an mpv with no file yet or on the same file as Vinyl.
+  // Melody's own mpv, by its bus name once known; until then (a moment after
+  // it starts), an mpv with no file yet or on the same file as Melody.
   function isEngineTwin(p) {
     if (!p || engine.pid === "") return false
     if (engineBusName !== "") return String(p.dbusName) === engineBusName
@@ -293,7 +293,7 @@ Item {
     }
   }
 
-  // Which bus name belongs to Vinyl's mpv: `busctl --user list` shows each
+  // Which bus name belongs to Melody's mpv: `busctl --user list` shows each
   // name's process id. Fixed arguments, no shell; at most a few times per
   // mpv start (mpv-mpris registers a moment after mpv starts).
   Timer {
@@ -333,7 +333,7 @@ Item {
   // `position` when `positionChanged` is emitted. Refresh once when a card
   // opens, then tick once per second only while a card is visible and the
   // player is playing, so nothing runs while the card is closed or paused.
-  // (Vinyl's own player keeps its position itself.)
+  // (Melody's own player keeps its position itself.)
   onOpenPopoversChanged: {
     if (openPopovers > 0 && player && !usingEngine) player.positionChanged()
     // A card opening with nothing playing checks again, so packages
@@ -350,7 +350,7 @@ Item {
   }
 
   // ---------------------------------------------------------------- settings
-  // Stored on Vinyl's own entry in shell.json, through the shell's scoped
+  // Stored on Melody's own entry in shell.json, through the shell's scoped
   // settings API (never by editing the file directly).
   readonly property var ownEntry: {
     var config = shell && shell.barConfig ? shell.barConfig : null
@@ -402,7 +402,7 @@ Item {
     || ["empty", "missing", "notFolder", "permission"].indexOf(libraryStatus) !== -1
 
   // ---------------------------------------------------------------- setup
-  // What Vinyl runs, and its one-click install (core/Requirements.qml).
+  // What Melody runs, and its one-click install (core/Requirements.qml).
   property Requirements requirements: Requirements {
     mpvBinary: root.engine.mpvBinary
     mprisScript: root.engine.mprisScript
@@ -529,7 +529,7 @@ Item {
   }
 
   // ---------------------------------------------------------------- playing from the library (PLAN §2.6)
-  // Vinyl's queue as the library shows it: { paths, source: { kind, id, name } }.
+  // Melody's queue as the library shows it: { paths, source: { kind, id, name } }.
   readonly property var queue: engine.hasTrack ? { paths: engine.paths, source: engine.source || { kind: "library", id: "", name: "Library" } } : null
   readonly property int queueIndex: usingEngine && engine.hasTrack ? engine.index : -1
   property string queueError: ""
@@ -572,7 +572,7 @@ Item {
 
   // ---------------------------------------------------------------- the restored session
   // After a restart the saved queue is checked against the library rules
-  // (as every queue is), then loaded into Vinyl's player, paused where it
+  // (as every queue is), then loaded into Melody's player, paused where it
   // was — so media keys work at once and play resumes right there. Tracks
   // that are gone are dropped; if the current one is gone, the queue is.
   property bool sessionPending: true

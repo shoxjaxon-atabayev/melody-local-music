@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "community.shoxjaxon.vinyl",
-  "name": "Vinyl",
+  "id": "community.shoxjaxon.melody",
+  "name": "Melody",
   "version": "0.3.0",
   "author": "shoxjaxon",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "panel": "LibraryPanel.qml"
   },
   "barWidget": {
-    "displayName": "Vinyl",
+    "displayName": "Melody",
     "description": "Now-playing indicator with a mini-player and a music library",
     "category": "Media",
     "allowMultiple": false,

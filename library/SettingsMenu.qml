@@ -7,7 +7,7 @@ import qs.Ui
 // "Add to playlist" menu (Omarchy's popup border and radius, on the opaque
 // background of its in-panel ConfirmDialog). How the bar shows the current
 // track: the display mode and, for Track Info, what its text shows. A
-// choice applies at once and is saved with Vinyl's entry in shell.json.
+// choice applies at once and is saved with Melody's entry in shell.json.
 // Fills its parent; a click outside closes it.
 // Keyboard: Left/Right and Enter pick a choice, Up/Down or Tab move between
 // the rows, Escape closes.
@@ -167,7 +167,7 @@ Item {
 
       Text {
         width: column.width
-        text: "Right-click Vinyl in the bar to pause or resume."
+        text: "Right-click Melody in the bar to pause or resume."
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         color: theme.textMuted

@@ -1,9 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// Vinyl's design tokens, mapped onto Omarchy's own system values (the shell's
-// Color and Style singletons), so Vinyl follows the user's theme, font,
-// spacing scale, corner radius, and control styles. The only Vinyl-specific
+// Melody's design tokens, mapped onto Omarchy's own system values (the shell's
+// Color and Style singletons), so Melody follows the user's theme, font,
+// spacing scale, corner radius, and control styles. The only Melody-specific
 // values are the approved layout dimensions, expressed in Omarchy's spacing
 // scale. An ordinary object (not a singleton) owned by each bar widget; it
 // reads no files of its own.

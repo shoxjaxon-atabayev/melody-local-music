@@ -1,4 +1,4 @@
-// Vinyl's playlists, held off the UI thread (Qt WorkerScript). The UI keeps
+// Melody's playlists, held off the UI thread (Qt WorkerScript). The UI keeps
 // only a summary (names and counts) and the entries of the open playlist.
 // Every reply echoes `seq`. Edits return the text to save; an edit that
 // would make the file larger than 16 MB is undone here, before any save.
@@ -37,7 +37,7 @@ function utf8Length(s) {
   return n
 }
 
-// Accepts only the exact shape Vinyl writes; anything else is reported, not
+// Accepts only the exact shape Melody writes; anything else is reported, not
 // repaired, so no entry is ever dropped silently.
 function parse(text) {
   let data

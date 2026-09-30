@@ -4,8 +4,8 @@ import qs.Commons
 import qs.Ui
 import "../core/Paths.js" as Paths
 
-// The mini-player's setup steps, shown in place of the player while Vinyl
-// can't play yet: first install what Vinyl runs, when something is missing
+// The mini-player's setup steps, shown in place of the player while Melody
+// can't play yet: first install what Melody runs, when something is missing
 // (a warning, the missing packages, and Install), then choose the music
 // folder. The install runs in Omarchy's terminal (core/Requirements.qml);
 // this view follows it and moves on to the folder step by itself.
@@ -45,7 +45,7 @@ Item {
   }
 
   readonly property string titleText: {
-    if (installStep) return missing.length === 1 ? "Vinyl needs one package" : "Vinyl needs " + missing.length + " packages"
+    if (installStep) return missing.length === 1 ? "Melody needs one package" : "Melody needs " + missing.length + " packages"
     if (folderStatus === "empty") return "Your music folder has no music"
     if (folderStatus === "missing" || folderStatus === "notFolder") return "Music folder not found"
     if (folderStatus === "permission") return "Can’t open your music folder"
@@ -54,14 +54,14 @@ Item {
 
   readonly property string detailText: {
     if (installStep) return ""
-    if (folderStatus === "empty") return folderPath + " has no music Vinyl can play. Choose another folder."
+    if (folderStatus === "empty") return folderPath + " has no music Melody can play. Choose another folder."
     if (folderStatus === "missing" || folderStatus === "notFolder") return folderPath + " was moved or deleted."
     if (folderStatus === "permission") return "You don’t have permission to read " + folderPath + "."
-    return "Vinyl lists every song in it, subfolders included, and plays them itself."
+    return "Melody lists every song in it, subfolders included, and plays them itself."
   }
 
   readonly property string noteText: !installStep ? ""
-    : installing ? "Continue in the terminal window. Vinyl goes on by itself when it’s done."
+    : installing ? "Continue in the terminal window. Melody goes on by itself when it’s done."
     : failed ? "The installation didn’t finish. Try again."
     : "They install in a terminal window, which asks for your password."
 

@@ -1,10 +1,10 @@
-# Vinyl
+# Melody
 
 A minimal local music player for the [Omarchy](https://omarchy.org/) bar.
 Choose your music folder once, click a song, and it plays: no player window,
 nothing to start by hand.
 
-![Vinyl: the Music Library window and the mini-player](preview.png)
+![Melody: the Music Library window and the mini-player](preview.png)
 
 ## Features
 
@@ -36,28 +36,28 @@ nothing to start by hand.
    omarchy pkg add mpv mpv-mpris cava
    ```
 
-2. Install Vinyl:
+2. Install Melody:
 
    ```bash
-   omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git --enable
+   omarchy plugin add https://github.com/shoxjaxon-atabayev/melody-local-music.git --enable
    ```
 
-   Vinyl appears on the right of your bar.
+   Melody appears on the right of your bar.
 
-3. Click Vinyl in the bar, then **Choose Music Folder**. Pick your music
+3. Click Melody in the bar, then **Choose Music Folder**. Pick your music
    folder (for example `~/Music`) and click **Use this folder**.
 
 4. Click a song. That's it.
 
-If you skip step 1, Vinyl lists whatever is missing the first time you open
+If you skip step 1, Melody lists whatever is missing the first time you open
 it, and installs it with one click in Omarchy's terminal.
 
 ## How to use
 
 | Do this | To |
 |---|---|
-| Click Vinyl in the bar | Open the mini-player |
-| Right-click Vinyl in the bar | Pause or resume |
+| Click Melody in the bar | Open the mini-player |
+| Right-click Melody in the bar | Pause or resume |
 | Click the library button in the mini-player | Open the Music Library |
 | Click the cog in the Music Library | Choose the bar display |
 
@@ -135,21 +135,21 @@ Add a line to `~/.config/hypr/bindings.lua` (pick a key combination that
 isn't already in use — see `omarchy menu keybindings --print`):
 
 ```lua
-o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle community.shoxjaxon.vinyl")
+o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle community.shoxjaxon.melody")
 ```
 
 ## Configuration
 
 - **Music folder:** choose it in the library (**Change folder**). It is saved
-  with Vinyl's entry in `~/.config/omarchy/shell.json` as `libraryFolder`.
+  with Melody's entry in `~/.config/omarchy/shell.json` as `libraryFolder`.
 - **Bar display:** choose it in the library's **Settings**. It is saved in
   the same entry as `displayMode`: `trackInfo`, `spectrum`, or `pulseDots`.
   A missing or unknown value means Track Info. What Track Info shows is
   saved as `trackLabel`: `artistTitle` (the default), `title`, or `artist`.
-- **Bar position:** Vinyl starts on the right. To move it, run
-  `omarchy bar move community.shoxjaxon.vinyl --section <left|center|right>`.
-- **Playlists** are saved in `~/.local/share/vinyl/playlists.json`
-  (or `$XDG_DATA_HOME/vinyl/playlists.json`). The folder and file are
+- **Bar position:** Melody starts on the right. To move it, run
+  `omarchy bar move community.shoxjaxon.melody --section <left|center|right>`.
+- **Playlists** are saved in `~/.local/share/melody/playlists.json`
+  (or `$XDG_DATA_HOME/melody/playlists.json`). The folder and file are
   private to your user. Limits: 100 playlists, 1,000 tracks per playlist,
   and 16 MB for the file.
 - **Where you stopped** (the queue, the song, its position, shuffle and
@@ -157,48 +157,48 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
   pause, seek, and song change, and every 5 seconds while playing. A queue
   holds up to 1,000 songs.
 - The library lists up to 20,000 songs, 8 folder levels deep.
-- Vinyl starts mpv itself, only while it has something to play, without a
+- Melody starts mpv itself, only while it has something to play, without a
   window and without your own mpv settings (`mpv.conf` doesn't affect it).
 
 Supported audio files: mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff,
 wv, ape, wma, and mka. Hidden files and folders are not shown. Links
-(symlinks) inside your music folder are never followed, and Vinyl never reads
+(symlinks) inside your music folder are never followed, and Melody never reads
 anything outside the folder you chose.
 
 ## Troubleshooting
 
-**"Vinyl needs mpv to play music"**
-mpv isn't installed. Click Vinyl in the bar and then **Install**, or run
+**"Melody needs mpv to play music"**
+mpv isn't installed. Click Melody in the bar and then **Install**, or run
 `omarchy pkg add mpv mpv-mpris`, then click the song again.
 
 **Install doesn't open a terminal, or says it didn't finish**
-Vinyl runs `omarchy pkg add` in Omarchy's floating terminal
+Melody runs `omarchy pkg add` in Omarchy's floating terminal
 (`omarchy-launch-floating-terminal-with-presentation`). If the terminal
 doesn't open within 20 seconds, or it closes before everything is
 installed, the mini-player shows **Try Again**. You can also install the
 packages yourself: `omarchy pkg add mpv mpv-mpris cava`.
 
-**Media keys don't pause Vinyl**
-They reach Vinyl through mpv-mpris: install it with
+**Media keys don't pause Melody**
+They reach Melody through mpv-mpris: install it with
 `omarchy pkg add mpv-mpris`. The bar's right click and the mini-player work
 without it.
 
 **"Playlists couldn't be read"**
 The playlists file is damaged, larger than 16 MB, or from a newer version of
-Vinyl. Vinyl doesn't change it. Click **Start fresh** and confirm to begin with
+Melody. Melody doesn't change it. Click **Start fresh** and confirm to begin with
 an empty list — your old file is kept next to it as
 `playlists.json.bak-<date-time>`.
 
 **"Playlists are read-only" or "can't be saved here"**
-For safety, Vinyl only saves to a private folder and file. Fix the
+For safety, Melody only saves to a private folder and file. Fix the
 permissions:
 
 ```bash
-chmod 700 ~/.local/share/vinyl
-chmod 600 ~/.local/share/vinyl/playlists.json
+chmod 700 ~/.local/share/melody
+chmod 600 ~/.local/share/melody/playlists.json
 ```
 
-Vinyl also refuses to save if `~/.local/share/vinyl` or `playlists.json` is a
+Melody also refuses to save if `~/.local/share/melody` or `playlists.json` is a
 symbolic link.
 
 **A track shows "Missing" or "Not in this library"**
@@ -207,19 +207,19 @@ you chose. Missing tracks are skipped when playing; remove them from the
 playlist or put the file back.
 
 **No cover art**
-Vinyl shows the cover embedded in the music file, or an image in the same
+Melody shows the cover embedded in the music file, or an image in the same
 folder named `cover`, `front`, `Folder`, or `AlbumArt` (`.jpg`, `.png`, or
-`.webp`; the names are case-sensitive). Covers reach Vinyl through
+`.webp`; the names are case-sensitive). Covers reach Melody through
 mpv-mpris: install it with `omarchy pkg add mpv-mpris`.
 
 **Icons show as boxes**
-Vinyl uses the icon glyphs of your Omarchy font. Omarchy installs a font with
+Melody uses the icon glyphs of your Omarchy font. Omarchy installs a font with
 these glyphs by default (JetBrainsMono Nerd Font); reinstall it if it was
 removed.
 
-**Vinyl doesn't appear in the bar**
+**Melody doesn't appear in the bar**
 Check that the plugin is enabled: `omarchy plugin list`. If it was added
-without `--enable`, run `omarchy plugin enable community.shoxjaxon.vinyl`.
+without `--enable`, run `omarchy plugin enable community.shoxjaxon.melody`.
 After an update, or if you edited the plugin's files by hand, restart the
 shell: `omarchy-restart-shell`.
 
@@ -228,14 +228,14 @@ Install it with `omarchy pkg add cava`, then choose Spectrum again in the
 library's Settings. Track Info and Pulse Dots don't need it.
 
 **Spectrum or Pulse Dots stay flat while music plays**
-They read the sound of your music player's own PipeWire stream. Hover Vinyl
+They read the sound of your music player's own PipeWire stream. Hover Melody
 in the bar: "No audio data" means that stream wasn't found — for example, the
 player outputs audio without PipeWire, or its audio is turned off. The dots
 and bars never move without real sound.
 
 **The bar shows only a music note**
 On a bar placed left or right there is no room for text or visualizations,
-so Vinyl shows its music note in every mode.
+so Melody shows its music note in every mode.
 
 ## Updating and removing
 
@@ -243,22 +243,22 @@ Update to the latest version, then restart the shell so it loads the new
 code (reloading plugins keeps the old version's code until a restart):
 
 ```bash
-omarchy plugin update community.shoxjaxon.vinyl
+omarchy plugin update community.shoxjaxon.melody
 omarchy-restart-shell
 ```
 
-Remove Vinyl:
+Remove Melody:
 
 ```bash
-omarchy plugin remove community.shoxjaxon.vinyl
+omarchy plugin remove community.shoxjaxon.melody
 ```
 
-Your playlists and the saved session stay in `~/.local/share/vinyl/`.
+Your playlists and the saved session stay in `~/.local/share/melody/`.
 Delete that folder if you don't need them anymore.
 
 ## Privacy
 
-Vinyl needs no network access and sends nothing anywhere; its mpv plays
+Melody needs no network access and sends nothing anywhere; its mpv plays
 local files only (online streaming is turned off). It reads only your chosen
 music folder and its own files, and writes only its playlists file, its
 session file, a temporary queue file and mpv's control socket in your
@@ -266,11 +266,11 @@ private runtime folder (the queue file is emptied as soon as mpv has loaded
 it), and its settings entry in `shell.json`. The one exception is the
 setup's **Install** button: only when you click it, Omarchy's package
 installer downloads the missing packages from the Arch repositories, and
-Vinyl follows the install through a small marker file in your private
+Melody follows the install through a small marker file in your private
 runtime folder, deleted when it's done.
 
 With **Spectrum** or **Pulse Dots** selected, and only while music plays,
-Vinyl also reads the sound level of your music player's own output — never
+Melody also reads the sound level of your music player's own output — never
 other applications, never your microphone. Pulse Dots reads it inside the
 shell; Spectrum reads it through cava, using a small settings file in the
 same private runtime folder. Nothing is recorded, stored, or sent. With

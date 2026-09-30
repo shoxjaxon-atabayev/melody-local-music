@@ -4,8 +4,8 @@ import Quickshell.Wayland
 import qs.Commons
 import "components"
 
-// Vinyl's mini-player popover: a layer-shell surface the size of the card,
-// placed next to the bar under the Vinyl icon. Like Omarchy's panels it draws
+// Melody's mini-player popover: a layer-shell surface the size of the card,
+// placed next to the bar under the Melody icon. Like Omarchy's panels it draws
 // no shadow of its own; blur, if any, comes from the theme's panel rules.
 //
 // Opening and closing follow Omarchy's default panel behavior (KeyboardPanel):
@@ -35,7 +35,7 @@ PanelWindow {
   readonly property real barThickness: anchorWindow
     ? (horizontalBar ? anchorWindow.height : anchorWindow.width) : 0
 
-  // Centre of the Vinyl icon along the bar. The Omarchy bar spans its whole
+  // Centre of the Melody icon along the bar. The Omarchy bar spans its whole
   // screen edge, so bar-window coordinates equal screen coordinates on that
   // axis. Sampled by the widget just before opening.
   property point anchorPoint: Qt.point(0, 0)
@@ -86,7 +86,7 @@ PanelWindow {
   color: "transparent"
 
   // The namespace of Omarchy's own panels (KeyboardPanel): Omarchy's default
-  // Hyprland rules give it no compositor open/close animation, so Vinyl opens
+  // Hyprland rules give it no compositor open/close animation, so Melody opens
   // and closes exactly like the other bar panels. Overlay keeps the card
   // above its own dismiss surfaces (Top).
   WlrLayershell.namespace: "omarchy-keyboard-panel"
@@ -142,7 +142,7 @@ PanelWindow {
           right: true
         }
 
-        WlrLayershell.namespace: "vinyl-popover-dismiss"
+        WlrLayershell.namespace: "melody-popover-dismiss"
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 

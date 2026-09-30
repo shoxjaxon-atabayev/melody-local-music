@@ -22,7 +22,7 @@ QtObject {
 
   required property PrivateFiles files
   property var player: null
-  // Vinyl's own player (instead of `player`): its mpv's process id, and the
+  // Melody's own player (instead of `player`): its mpv's process id, and the
   // client name it plays under. mpv's native PipeWire stream carries only
   // the name (the process id is on its client, which isn't visible here).
   property string processId: ""
@@ -91,8 +91,8 @@ QtObject {
   }
 
   // The player's stream: by process id when known, otherwise by name
-  // (binary, application name, node name). Vinyl's own mpv: a stream that
-  // has no process id is matched by the client name Vinyl gave it. With
+  // (binary, application name, node name). Melody's own mpv: a stream that
+  // has no process id is matched by the client name Melody gave it. With
   // several streams of the same player, the one whose media name mentions
   // the track wins.
   function pickStream(streams, ids, title) {
@@ -320,7 +320,7 @@ QtObject {
 
   function cavaConfig(source) {
     return [
-      "# Written by Vinyl for the bar's Spectrum; replaced as needed.",
+      "# Written by Melody for the bar's Spectrum; replaced as needed.",
       "[general]",
       "framerate = 30",
       "bars = " + bandCount,

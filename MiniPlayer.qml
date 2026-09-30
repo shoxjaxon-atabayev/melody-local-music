@@ -2,10 +2,10 @@ import QtQuick
 import qs.Commons
 import "components"
 
-// The Vinyl mini-player card: header (with the Music Library button),
+// The Melody mini-player card: header (with the Music Library button),
 // artwork with track info, progress, and playback controls. Driven by the
 // plugin service; each control is enabled only when the selected player
-// supports it, and shows the player's reported state. Until Vinyl can play
+// supports it, and shows the player's reported state. Until Melody can play
 // (first run, or mpv missing) the setup steps take the player's place, at
 // the same card size. Styling comes from Omarchy's system values via
 // `theme` (core/Theme.qml).
@@ -55,7 +55,7 @@ GlassSurface {
         anchors.verticalCenter: parent.verticalCenter
         spacing: theme.px(8)
 
-        VinylMark {
+        MelodyMark {
           theme: root.theme
           anchors.verticalCenter: parent.verticalCenter
           size: theme.px(18)
@@ -63,7 +63,7 @@ GlassSurface {
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          text: "Vinyl"
+          text: "Melody"
           textFormat: Text.PlainText
           color: theme.textPrimary
           font.family: theme.fontFamily

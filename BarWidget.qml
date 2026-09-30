@@ -7,7 +7,7 @@ import "core"
 import "core/BarDisplay.js" as BarDisplay
 import "core/Paths.js" as Paths
 
-// Vinyl's bar indicator, built on Omarchy's WidgetButton (the base of its bar
+// Melody's bar indicator, built on Omarchy's WidgetButton (the base of its bar
 // buttons: hover tooltip, click routing, the dimmed state). It shows:
 //   - a track: the chosen display mode. Track Info ("Artist — Title", the
 //     title only, or the artist only, as chosen; the title cut to 12
@@ -21,7 +21,7 @@ import "core/Paths.js" as Paths
 // right click pauses or resumes the player.
 BarWidget {
   id: root
-  moduleName: "community.shoxjaxon.vinyl"
+  moduleName: "community.shoxjaxon.melody"
 
   // Typed as QtObject so it reads null once the service is destroyed
   // (e.g. on plugin hot-reload, which unloads services before widgets).
@@ -140,14 +140,14 @@ BarWidget {
   }
 
   readonly property string tooltip: {
-    if (!service) return "Vinyl"
+    if (!service) return "Melody"
     if (!hasTrack) {
       if (service.needsSetup && service.requirements.missing.length)
-        return "Vinyl — click to install what it needs (" + service.requirements.missing.join(", ") + ")"
-      if (!service.needsLibrarySetup) return "Vinyl — nothing playing"
-      if (service.libraryRoot === "") return "Vinyl — choose a music folder in the library"
-      if (service.libraryStatus === "empty") return "Vinyl — your music folder has no music to play"
-      return "Vinyl — your music folder can’t be opened"
+        return "Melody — click to install what it needs (" + service.requirements.missing.join(", ") + ")"
+      if (!service.needsLibrarySetup) return "Melody — nothing playing"
+      if (service.libraryRoot === "") return "Melody — choose a music folder in the library"
+      if (service.libraryStatus === "empty") return "Melody — your music folder has no music to play"
+      return "Melody — your music folder can’t be opened"
     }
     var title = service.displayTitle || "Unknown track"
     var text = service.artist ? title + " — " + service.artist : title
@@ -266,7 +266,7 @@ BarWidget {
     id: popoverLoader
     active: root.service !== null
 
-    VinylPopover {
+    MelodyPopover {
       anchorItem: button
       bar: root.bar
       service: root.service

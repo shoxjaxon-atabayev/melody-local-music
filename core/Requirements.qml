@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Commons
 
-// What Vinyl runs, checked by the files it runs (`find -H`, no shell), and a
+// What Melody runs, checked by the files it runs (`find -H`, no shell), and a
 // one-click install of whatever is missing:
 //   mpv        plays the music
 //   mpv-mpris  media keys, Omarchy's media controls, and cover art
@@ -59,7 +59,7 @@ QtObject {
     if (installing || missing.length === 0) return
     // The marker's path goes into the terminal's command line: plain path
     // characters only.
-    var m = runtimeDir + "/vinyl-install-" + Date.now()
+    var m = runtimeDir + "/melody-install-" + Date.now()
     if (runtimeDir === "" || !/^\/[A-Za-z0-9._\/-]+$/.test(m)) {
       installState = "failed"
       return
@@ -70,7 +70,7 @@ QtObject {
     installState = "installing"
     var q = Util.shellQuote(m)
     var command = "trap " + Util.shellQuote("echo done > " + q) + " EXIT; : > " + q
-      + "; echo " + Util.shellQuote("Installing " + missing.join(", ") + " for Vinyl…")
+      + "; echo " + Util.shellQuote("Installing " + missing.join(", ") + " for Melody…")
       + "; omarchy-pkg-add " + missing.join(" ")
     Util.execArgv([omarchyPath + "/bin/omarchy-launch-floating-terminal-with-presentation", command])
   }

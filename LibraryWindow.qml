@@ -9,7 +9,7 @@ import "library"
 import "core"
 import "core/Paths.js" as Paths
 
-// Vinyl's Music Library window. A large card in Omarchy's panel conventions:
+// Melody's Music Library window. A large card in Omarchy's panel conventions:
 // the panels' layer namespace (no compositor animation), the theme's popup
 // surface, border, and radius, Omarchy's fonts, spacing, controls, and
 // system glyphs, a 140 ms fade, a brief keyboard-focus prime, and closing
@@ -18,7 +18,7 @@ import "core/Paths.js" as Paths
 // Left: the library folder and the user's playlists. Right: the whole
 // library as one list — every song in the chosen folder and its subfolders,
 // in blocks headed by each folder's path — or a playlist, search results,
-// or the folder chooser. Clicking a song plays it in Vinyl's own player,
+// or the folder chooser. Clicking a song plays it in Melody's own player,
 // with the rest of the list queued after it; controls stay in the
 // mini-player.
 //
@@ -721,10 +721,10 @@ PanelWindow {
     onTriggered: if (win.open) win.focusPrimed = true
   }
 
-  // Outside-click dismissal, as in Vinyl's popover (Omarchy's KeyboardPanel
+  // Outside-click dismissal, as in Melody's popover (Omarchy's KeyboardPanel
   // behavior): while open, every monitor gets a transparent, non-focusable
   // surface under the window that closes it on any click. It also keeps the
-  // pointer over Vinyl's surfaces, so Hyprland doesn't hand keyboard focus
+  // pointer over Melody's surfaces, so Hyprland doesn't hand keyboard focus
   // to the app underneath once the focus prime ends. The bar strip is cut
   // out so the bar keeps receiving its clicks.
   readonly property string barPosition: {
@@ -755,7 +755,7 @@ PanelWindow {
           right: true
         }
 
-        WlrLayershell.namespace: "vinyl-library-dismiss"
+        WlrLayershell.namespace: "melody-library-dismiss"
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
@@ -858,7 +858,7 @@ PanelWindow {
           anchors.verticalCenter: parent.verticalCenter
           spacing: theme.px(8)
 
-          VinylMark {
+          MelodyMark {
             theme: win.theme
             anchors.verticalCenter: parent.verticalCenter
             size: theme.px(18)
@@ -866,7 +866,7 @@ PanelWindow {
 
           Text {
             anchors.verticalCenter: parent.verticalCenter
-            text: "Vinyl"
+            text: "Melody"
             textFormat: Text.PlainText
             color: theme.textPrimary
             font.family: theme.fontFamily
@@ -1422,19 +1422,19 @@ PanelWindow {
           height: visible ? implicitHeight : 0
           error: win.noticeKind === "openFailed" || win.noticeKind === "noPlayer"
           title: ({
-            noPlayer: "Vinyl needs mpv to play music",
+            noPlayer: "Melody needs mpv to play music",
             openFailed: Paths.displayName(win.service.playbackError),
-            storeChanged: "Your playlists changed outside Vinyl",
+            storeChanged: "Your playlists changed outside Melody",
             limit: win.libraryIndex && win.libraryIndex.status === "timedOut" ? "Only part of your library is listed"
               : "Showing the first 20,000 songs"
           })[win.noticeKind] || ""
           detail: ({
             noPlayer: "Install it, then click a song again.",
             openFailed: "Click a song to try again.",
-            storeChanged: "Vinyl reloaded them. Please repeat your change.",
+            storeChanged: "Melody reloaded them. Please repeat your change.",
             limit: win.libraryIndex && win.libraryIndex.status === "timedOut"
               ? "Listing stopped after 10 seconds. Everything found so far can be played and searched."
-              : "Vinyl lists up to 20,000 songs, 8 folder levels deep."
+              : "Melody lists up to 20,000 songs, 8 folder levels deep."
           })[win.noticeKind] || ""
           command: win.noticeKind === "noPlayer" ? "omarchy pkg add mpv" : ""
         }
@@ -1500,8 +1500,8 @@ PanelWindow {
               chooserTimedOut: "This folder is taking too long"
             })[win.hero] || ""
             detail: ({
-              noFolder: "Choose the folder where you keep your music. Vinyl lists every song in it, subfolders included, and plays them itself.",
-              emptyLibrary: win.shortPath(win.libraryRoot) + " has no music Vinyl can play (mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, or mka), in it or in its subfolders. Choose another folder, or add music to this one and check again.",
+              noFolder: "Choose the folder where you keep your music. Melody lists every song in it, subfolders included, and plays them itself.",
+              emptyLibrary: win.shortPath(win.libraryRoot) + " has no music Melody can play (mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff, wv, ape, wma, or mka), in it or in its subfolders. Choose another folder, or add music to this one and check again.",
               missing: win.shortPath(win.libraryRoot) + " was moved or deleted.",
               permission: "You don’t have permission to read " + win.shortPath(win.libraryRoot) + ".",
               timedOut: "Listing stopped after 10 seconds. Very large or slow folders can hit this limit.",
@@ -1620,7 +1620,7 @@ PanelWindow {
         anchors.fill: parent
         opened: win.confirmKind !== ""
         message: win.confirmKind === "fresh"
-          ? "Start fresh? Vinyl keeps your current playlists file as a dated backup, then starts with no playlists."
+          ? "Start fresh? Melody keeps your current playlists file as a dated backup, then starts with no playlists."
           : "Delete the playlist “" + (win.currentPlaylist ? Paths.displayName(win.currentPlaylist.name) : "")
             + "”? Your music files are not touched."
         confirmText: win.confirmKind === "fresh" ? "Start fresh" : "Delete"
