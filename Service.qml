@@ -79,7 +79,7 @@ Item {
   readonly property string album: usingEngine ? Metadata.plainText(engine.tags.album, 300)
     : player ? Metadata.plainText(player.trackAlbum, 300) : ""
   readonly property string artUrl: usingEngine ? engineArtUrl
-    : player ? Metadata.localArtUrl(player.trackArtUrl) : ""
+    : player ? Metadata.artUrl(player.trackArtUrl) : ""
   readonly property bool hasTrack: usingEngine || player !== null
     && (title !== "" || artist !== "" || player.playbackState !== MprisPlaybackState.Stopped)
   readonly property string playerName: usingEngine ? "Vinyl"
@@ -103,8 +103,9 @@ Item {
   readonly property bool repeatOne: usingEngine ? engine.repeatOne
     : player !== null && player.loopSupported && player.loopState === MprisLoopState.Track
 
-  // Cover art of Vinyl's track: the local file:// artUrl mpv-mpris reports
-  // for it (a cover image next to the file), when mpv-mpris is installed.
+  // Cover art of Vinyl's track, as mpv-mpris reports it (when installed):
+  // the image embedded in the file, or a cover image next to it
+  // (cover.jpg, front.png, Folder.jpg, …).
   readonly property var engineTwin: {
     if (engineBusName === "") return null
     for (var i = 0; i < players.length; i++)
@@ -112,7 +113,7 @@ Item {
     return null
   }
   readonly property string engineArtUrl: engineTwin && urlPathOf(engineTwin) === engine.path && engine.path !== ""
-    ? Metadata.localArtUrl(engineTwin.trackArtUrl) : ""
+    ? Metadata.artUrl(engineTwin.trackArtUrl) : ""
 
   // ---------------------------------------------------------------- capabilities
   readonly property bool canControl: usingEngine || player !== null && player.canControl

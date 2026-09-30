@@ -53,3 +53,17 @@ function localArtUrl(value) {
   }
   return "file:///" + encoded.join("/")
 }
+
+// Longest embedded cover accepted as a data: URL, in characters.
+var MAX_DATA_ART = 16 * 1024 * 1024
+
+// MPRIS artUrl -> the cover to show, or "": a local file (see localArtUrl),
+// or the image embedded in the music file, which mpv-mpris sends as a
+// base64 data: URL. Only image types, only base64 characters, at most
+// MAX_DATA_ART characters; Qt decodes it like a cover file.
+function artUrl(value) {
+  var local = localArtUrl(value)
+  if (local !== "") return local
+  if (typeof value !== "string" || value.length > MAX_DATA_ART) return ""
+  return /^data:image\/(jpeg|png|webp|gif|bmp);base64,[A-Za-z0-9+\/]+={0,2}$/.test(value) ? value : ""
+}

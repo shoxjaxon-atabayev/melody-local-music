@@ -246,6 +246,12 @@ The file was moved, renamed, or deleted, or it is outside the music folder
 you chose. Missing tracks are skipped when playing; remove them from the
 playlist or put the file back.
 
+**No cover art**
+Vinyl shows the cover embedded in the music file, or an image in the same
+folder named `cover`, `front`, `Folder`, or `AlbumArt` (`.jpg`, `.png`, or
+`.webp`; the names are case-sensitive). Covers reach Vinyl through
+mpv-mpris: install it with `omarchy pkg add mpv-mpris`.
+
 **Icons show as boxes**
 Vinyl uses the icon glyphs of your Omarchy font. Omarchy installs a font with
 these glyphs by default (JetBrainsMono Nerd Font); reinstall it if it was

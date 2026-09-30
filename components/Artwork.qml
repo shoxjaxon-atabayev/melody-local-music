@@ -4,10 +4,10 @@ import qs.Commons
 import qs.Ui
 
 // Album artwork as Omarchy's media plugin shows it: a small-radius tile with
-// the normal control fill and border. The player's local cover image fills
-// the tile; `source` must already be a validated local file:// URL (see
-// core/Metadata.js). Without one, or if it fails to decode, the tile shows
-// a music note.
+// the normal control fill and border. The player's cover image fills the
+// tile; `source` must already be a validated cover URL, a local file or an
+// embedded image (Metadata.artUrl in core/Metadata.js). Without one, or if
+// it fails to decode, the tile shows a music note.
 Item {
   id: root
 
