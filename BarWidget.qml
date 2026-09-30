@@ -162,6 +162,13 @@ BarWidget {
   // the whole button).
   readonly property bool audioLive: !!service && service.audio.status === "live"
 
+  // The bar's open-panel underline spans what the button paints (the sign
+  // and text, or the visualization), as Omarchy's clock does for its label,
+  // instead of the bar's default 55% of the slot. The content is centered,
+  // so the underline lines up with it. The note alone keeps the default,
+  // the mark every icon widget gets.
+  readonly property real openPanelIndicatorWidth: face === "note" ? 0 : Math.ceil(content.implicitWidth)
+
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
