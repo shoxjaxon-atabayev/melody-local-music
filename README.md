@@ -1,130 +1,67 @@
 # Vinyl
 
-A minimal local music player for [Omarchy](https://omarchy.org/). Choose
-your music folder once, and every song in it — subfolders included — is in
-one list: click a song and it plays. Vinyl puts what you're listening to in
-your bar, gives you a small mini-player to control it, and remembers where
-you stopped, even after a restart.
+A minimal local music player for the [Omarchy](https://omarchy.org/) bar.
+Choose your music folder once, click a song, and it plays: no player window,
+nothing to start by hand.
 
-Vinyl plays music itself, with a hidden mpv it starts and stops on its own:
-there is nothing to run by hand and no player window. It also shows and
-controls other local music players (through the standard MPRIS interface)
-while they play. It never goes online, never scans in the background, and
-never changes your music files.
+![Vinyl: the Music Library window and the mini-player](preview.png)
 
 ## Features
 
-**In the bar**
-
-- What's playing, in the style you choose (see [Bar display](#bar-display)):
-  - **Track Info** (default): `Artist Name — Song Title`, the title only,
-    or the artist only, as you choose; the title shortened to 12
-    characters, after a pause sign while the song plays or a play sign
-    while it's paused.
-  - **Spectrum**: small frequency bars that follow the music.
-  - **Pulse Dots**: a row of dots that follow how loud the music is.
-- Dimmed while paused. Hover for the full title and artist.
-- Right-click to pause or resume.
-- After a restart it shows the song you stopped on, paused where you left it.
-- Before you've chosen a music folder, it shows **Set up music library**.
-
-**Mini-player** (click Vinyl in the bar)
-
-- Cover art, title, artist, and album.
-- Play/pause, previous, next, shuffle, and repeat-one.
-- A progress bar you can click or drag to seek.
-- Controls your player doesn't support are shown disabled.
-- A library button that opens the Music Library.
-- The first time, it sets Vinyl up: it installs anything Vinyl needs that's
-  missing, then has you choose your music folder.
-
-**Music Library**
-
-- Every song in your music folder and its subfolders, in one list, grouped
-  in blocks headed by each folder's path.
-- Click any song to play it. The rest of the list plays after it (and
-  **previous** goes back up the list), then playback stops.
-- Search the whole library by file or folder name.
-- Vinyl remembers the song, the queue, and the exact position. Pause, turn
-  the computer off, and the next day the song is waiting in the bar, paused
-  at the same spot — play continues right there, never from 0.
-- **Playlists:** collect tracks from anywhere in your library into named
-  playlists. Create, rename, delete, add, remove, and reorder.
-- Playing a track from a playlist plays only that playlist: from the chosen
-  track to the end, then from the beginning up to the track before it.
-- Tracks that were moved or deleted are marked as missing and skipped.
-- Full keyboard control, and a keyboard shortcut to open the library.
-
-Vinyl follows your Omarchy theme, font, and colors, and opens and closes like
-Omarchy's own panels.
-
-## Requirements
-
-- **Omarchy** with its Quickshell-based shell (Omarchy 4 or newer).
-- **mpv**, which plays the music, and **mpv-mpris**, which lets media keys
-  and Omarchy's media controls reach Vinyl. Omarchy installs both by
-  default; if you removed them:
-
-  ```bash
-  omarchy pkg add mpv mpv-mpris
-  ```
-
-  Vinyl starts mpv itself, only while it has something to play, without a
-  window and without your own mpv settings (`mpv.conf` doesn't affect it).
-- Optional: the mini-player also shows other MPRIS music players, such as
-  MPD (with mpDris2) or Strawberry. Web browsers are ignored on purpose.
-
-- Optional, for the **Spectrum** bar display only: **cava**.
-
-  ```bash
-  omarchy pkg add cava
-  ```
-
-You don't have to install these by hand: the first time you open the
-mini-player, Vinyl lists whichever of mpv, mpv-mpris, and cava are missing
-and installs them with one click (see [Getting started](#getting-started)).
+- **In the bar:** the song that's playing (artist and title, the title only,
+  or the artist only) with a pause or play sign, or small Spectrum bars or
+  Pulse Dots that follow the music.
+- **Mini-player:** cover art, play/pause, previous, next, shuffle, repeat,
+  and seeking.
+- **Music Library:** every song in your folder in one list, search, and your
+  own playlists.
+- **Remembers where you stopped**, even after a restart.
+- **First run sets itself up:** it installs anything missing, then asks for
+  your music folder.
+- Follows your Omarchy theme. Plays offline and never changes your files.
 
 ## Installation
 
-1. Add the plugin:
+**You need**
+
+- Omarchy 4 or newer
+- **mpv** and **mpv-mpris** (Omarchy includes them)
+- **cava**, only for the Spectrum bar display
+
+**Steps**
+
+1. Install the packages. Any you already have are skipped:
 
    ```bash
-   omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git
+   omarchy pkg add mpv mpv-mpris cava
    ```
 
-   Plugins are added disabled, so you can review the code first. The files
-   are placed in `~/.config/omarchy/plugins/community.shoxjaxon.vinyl/`.
-
-2. Enable it:
+2. Install Vinyl:
 
    ```bash
-   omarchy plugin enable community.shoxjaxon.vinyl
+   omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git --enable
    ```
 
-   Vinyl appears in the right section of your bar. To move it, use
-   `omarchy bar move community.shoxjaxon.vinyl --section <left|center|right>`.
+   Vinyl appears on the right of your bar.
 
-You can also do both steps at once:
+3. Click Vinyl in the bar, then **Choose Music Folder**. Pick your music
+   folder (for example `~/Music`) and click **Use this folder**.
 
-```bash
-omarchy plugin add https://github.com/shoxjaxon-atabayev/vinyl-local-music.git --enable
-```
+4. Click a song. That's it.
 
-## Getting started
+If you skip step 1, Vinyl lists whatever is missing the first time you open
+it, and installs it with one click in Omarchy's terminal.
 
-1. Click **Set up music library** in the bar.
-2. If something Vinyl needs is missing, the mini-player lists it. Click
-   **Install**: Omarchy's terminal opens, asks for your password, and
-   installs it (`omarchy pkg add`). The mini-player moves on by itself when
-   it's done; if the install doesn't finish, click **Try Again**.
-3. Click **Choose Music Folder**. The Music Library opens on the folder
-   chooser: browse to your music (for example `~/Music`) and click **Use
-   this folder**. Vinyl remembers it. (If the folder has no music Vinyl can
-   play, the mini-player and the library say so and let you choose another
-   one.)
-4. Click any song to play it.
+## How to use
 
-That's all: there is no player to start.
+| Do this | To |
+|---|---|
+| Click Vinyl in the bar | Open the mini-player |
+| Right-click Vinyl in the bar | Pause or resume |
+| Click the library button in the mini-player | Open the Music Library |
+| Click the cog in the Music Library | Choose the bar display |
+
+---
 
 ## Bar display
 
@@ -142,17 +79,30 @@ With Track Info, choose what its text shows under **Track Info shows**:
 starts with a copy of the artist, as files from video sites often have
 ("Tame Impala - Let It Happen"), is shown without it: "Let It Happen".
 
-The choices apply at once and are kept after restarts. Spectrum and Pulse
+The choices apply at once and are kept after restarts. The bar is dimmed
+while paused; hover it for the full title and artist. Spectrum and Pulse
 Dots move only with real audio: while paused, or when there is no audio to
 read, they rest flat. They read only your music player's own sound, never
 other apps (see [Privacy](#privacy)).
 
 ## Using the Music Library
 
+**Playing**
+
+- Click a song to play it. The rest of the list plays after it (and
+  **previous** goes back up the list), then playback stops. Clicking the
+  song that is playing doesn't restart it.
+- A song from a playlist plays only that playlist: from that song to the
+  end, then from the beginning up to the song before it.
+- Pause, turn the computer off, and the next day the song is waiting in the
+  bar, paused at the same spot.
+- Songs that were moved or deleted are marked as missing and skipped.
+- Other local music players (such as MPD with mpDris2, or Strawberry) are
+  shown in the bar and the mini-player while they play. Web browsers are
+  ignored on purpose.
+
 **Mouse**
 
-- Click a song to play it. Clicking the song that is playing doesn't
-  restart it.
 - **Change folder** (next to the folder's path at the top) picks another
   music folder.
 - Hover a track and click its **+** button to add it to a playlist.
@@ -160,7 +110,6 @@ other apps (see [Privacy](#privacy)).
   playing; **Shift-click** selects a range), and choose **Add to playlist**.
 - In a playlist, hover a track and click **−** to remove it, or use
   **Rename**, **Delete**, and **Play playlist** at the top.
-- Click the cog next to the close button for **Settings** (the bar display).
 - Click outside the window to close it.
 
 **Keyboard**
@@ -197,6 +146,8 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
   the same entry as `displayMode`: `trackInfo`, `spectrum`, or `pulseDots`.
   A missing or unknown value means Track Info. What Track Info shows is
   saved as `trackLabel`: `artistTitle` (the default), `title`, or `artist`.
+- **Bar position:** Vinyl starts on the right. To move it, run
+  `omarchy bar move community.shoxjaxon.vinyl --section <left|center|right>`.
 - **Playlists** are saved in `~/.local/share/vinyl/playlists.json`
   (or `$XDG_DATA_HOME/vinyl/playlists.json`). The folder and file are
   private to your user. Limits: 100 playlists, 1,000 tracks per playlist,
@@ -206,6 +157,8 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
   pause, seek, and song change, and every 5 seconds while playing. A queue
   holds up to 1,000 songs.
 - The library lists up to 20,000 songs, 8 folder levels deep.
+- Vinyl starts mpv itself, only while it has something to play, without a
+  window and without your own mpv settings (`mpv.conf` doesn't affect it).
 
 Supported audio files: mp3, flac, ogg, oga, opus, m4a, aac, wav, aif, aiff,
 wv, ape, wma, and mka. Hidden files and folders are not shown. Links
@@ -265,8 +218,10 @@ these glyphs by default (JetBrainsMono Nerd Font); reinstall it if it was
 removed.
 
 **Vinyl doesn't appear in the bar**
-Check that the plugin is enabled: `omarchy plugin list`. If you edited the
-plugin's files by hand, reload with `omarchy-shell shell rescanPlugins`.
+Check that the plugin is enabled: `omarchy plugin list`. If it was added
+without `--enable`, run `omarchy plugin enable community.shoxjaxon.vinyl`.
+After an update, or if you edited the plugin's files by hand, restart the
+shell: `omarchy-restart-shell`.
 
 **Spectrum says it needs cava**
 Install it with `omarchy pkg add cava`, then choose Spectrum again in the
@@ -278,11 +233,21 @@ in the bar: "No audio data" means that stream wasn't found — for example, the
 player outputs audio without PipeWire, or its audio is turned off. The dots
 and bars never move without real sound.
 
-**The bar shows text on a horizontal bar only**
+**The bar shows only a music note**
 On a bar placed left or right there is no room for text or visualizations,
 so Vinyl shows its music note in every mode.
 
-## Removing Vinyl
+## Updating and removing
+
+Update to the latest version, then restart the shell so it loads the new
+code (reloading plugins keeps the old version's code until a restart):
+
+```bash
+omarchy plugin update community.shoxjaxon.vinyl
+omarchy-restart-shell
+```
+
+Remove Vinyl:
 
 ```bash
 omarchy plugin remove community.shoxjaxon.vinyl
