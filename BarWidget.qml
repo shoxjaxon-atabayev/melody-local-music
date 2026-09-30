@@ -198,15 +198,15 @@ BarWidget {
         color: button.foreground
       }
 
-      // Track Info's playback state: a play sign while playing, a pause
-      // sign while paused.
+      // Track Info's playback state, as Omarchy's media controls show it:
+      // a pause sign while playing, a play sign while paused.
       Glyph {
         objectName: "barState"
         anchors.verticalCenter: parent.verticalCenter
         visible: root.face === "text"
         width: Style.bar.iconCanvas
         height: Style.bar.iconCanvas
-        name: root.paused ? "pause" : "play"
+        name: root.paused ? "play" : "pause"
         color: button.foreground
       }
 

@@ -18,8 +18,8 @@ never changes your music files.
 
 - What's playing, in the style you choose (see [Bar display](#bar-display)):
   - **Track Info** (default): `Artist Name — Song Title`, with the title
-    shortened to 12 characters, after a play or pause sign that shows
-    whether the song is playing or paused.
+    shortened to 12 characters, after a pause sign while the song plays
+    or a play sign while it's paused.
   - **Spectrum**: small frequency bars that follow the music.
   - **Pulse Dots**: a row of dots that follow how loud the music is.
 - Dimmed while paused. Hover for the full title and artist.
@@ -132,7 +132,7 @@ the close button). Choose how the bar shows what's playing:
 
 | Mode | Shows |
 |---|---|
-| **Track Info** (default) | `Artist Name — Song Title`. The artist is shown in full; the title is shortened to 12 characters, ending in "…" when cut. A play sign before it means the song is playing, a pause sign that it is paused. |
+| **Track Info** (default) | `Artist Name — Song Title`. The artist is shown in full; the title is shortened to 12 characters, ending in "…" when cut. A pause sign before it means the song is playing, a play sign that it is paused, as in Omarchy's media controls. |
 | **Spectrum** | Twenty-four small bars, low to high frequencies, measured from the music. Needs **cava**. |
 | **Pulse Dots** | Five dots whose size follows how loud the music is. |
 
