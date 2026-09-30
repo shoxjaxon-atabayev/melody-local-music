@@ -10,8 +10,9 @@ import "core/Paths.js" as Paths
 // Vinyl's bar indicator, built on Omarchy's WidgetButton (the base of its bar
 // buttons: hover tooltip, click routing, the dimmed state). It shows:
 //   - a track: the chosen display mode. Track Info ("Artist — Title", the
-//     title cut to 12 characters), Spectrum, or Pulse Dots (both drawn from
-//     the player's real audio). Dimmed while paused;
+//     title cut to 12 characters, after a play or pause sign for the
+//     playback state), Spectrum, or Pulse Dots (both drawn from the
+//     player's real audio). Dimmed while paused;
 //   - no track and no usable music folder: a note and "Set up music library";
 //   - no track otherwise: a neutral note.
 // A vertical bar has no room for text or visualizations, so it always shows
@@ -192,6 +193,18 @@ BarWidget {
         width: Style.bar.iconCanvas
         height: Style.bar.iconCanvas
         name: "note"
+        color: button.foreground
+      }
+
+      // Track Info's playback state: a play sign while playing, a pause
+      // sign while paused.
+      Glyph {
+        objectName: "barState"
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.face === "text"
+        width: Style.bar.iconCanvas
+        height: Style.bar.iconCanvas
+        name: root.paused ? "pause" : "play"
         color: button.foreground
       }
 
