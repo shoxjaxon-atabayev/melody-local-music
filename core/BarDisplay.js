@@ -15,8 +15,12 @@ var LABEL_TITLE = "title"
 var LABEL_ARTIST = "artist"
 var LABELS = [LABEL_ARTIST_TITLE, LABEL_TITLE, LABEL_ARTIST]
 
-// Longest title shown in Track Info, counting the ellipsis.
+// Longest title shown in Track Info, counting the ellipsis: next to the
+// artist, and on its own. The title alone gets about the length the two
+// together have on average ("Artist — Title…" came to 26 characters across
+// a real library of 105 songs), so the bar keeps its usual width.
 var MAX_TITLE = 12
+var MAX_TITLE_ALONE = 26
 
 // A saved setting, or Track Info (the default) for anything missing or
 // unknown.
@@ -57,16 +61,17 @@ function shortTitle(title, max) {
 
 // Track Info's text for `label` (see LABELS; the default when missing):
 //   artistTitle  "Full Artist Name — Song Ti…": the artist in full, the
-//                title shortened
-//   title        "Song Ti…"
-//   artist       "Full Artist Name"
+//                title cut to MAX_TITLE
+//   title        "Song Title, cut to about the same length…": the title
+//                cut to MAX_TITLE_ALONE
+//   artist       "Full Artist Name": the artist in full
 // With one of the two missing, the other is shown.
 function trackLabel(artist, title, label) {
   var a = String(artist || "").trim()
-  var t = shortTitle(title)
   var l = normalizeLabel(label)
+  var t = shortTitle(title, l === LABEL_TITLE ? MAX_TITLE_ALONE : MAX_TITLE)
   if (l === LABEL_TITLE) return t !== "" ? t : a
-  if (l === LABEL_ARTIST) return a !== "" ? a : t
+  if (l === LABEL_ARTIST) return a !== "" ? a : shortTitle(title, MAX_TITLE_ALONE)
   if (a !== "" && t !== "") return a + " — " + t
   return a !== "" ? a : t
 }

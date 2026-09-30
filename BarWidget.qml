@@ -11,7 +11,8 @@ import "core/Paths.js" as Paths
 // buttons: hover tooltip, click routing, the dimmed state). It shows:
 //   - a track: the chosen display mode. Track Info ("Artist — Title", the
 //     title only, or the artist only, as chosen; the title cut to 12
-//     characters; after a pause or play sign for the playback state),
+//     characters next to the artist, 26 on its own; after a pause or play
+//     sign for the playback state),
 //     Spectrum, or Pulse Dots (both drawn from the player's real audio).
 //     Dimmed while paused;
 //   - no track and no usable music folder: a note and "Set up music library";

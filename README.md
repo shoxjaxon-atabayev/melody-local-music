@@ -75,7 +75,14 @@ the close button). Choose how the bar shows what's playing:
 | **Pulse Dots** | Five dots whose size follows how loud the music is. |
 
 With Track Info, choose what its text shows under **Track Info shows**:
-**Artist — Title** (the default), **Title**, or **Artist**. A title that
+
+| Choice | Shows |
+|---|---|
+| **Artist — Title** (default) | The artist in full and the title shortened to 12 characters, about 26 characters in all. |
+| **Title** | The title alone, shortened to 26 characters, so the bar keeps about the same width. |
+| **Artist** | The artist's name in full. |
+
+A title that
 starts with a copy of the artist, as files from video sites often have
 ("Tame Impala - Let It Happen"), is shown without it: "Let It Happen".
 
