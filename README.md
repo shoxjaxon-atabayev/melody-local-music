@@ -17,9 +17,10 @@ never changes your music files.
 **In the bar**
 
 - What's playing, in the style you choose (see [Bar display](#bar-display)):
-  - **Track Info** (default): `Artist Name — Song Title`, with the title
-    shortened to 12 characters, after a pause sign while the song plays
-    or a play sign while it's paused.
+  - **Track Info** (default): `Artist Name — Song Title`, the title only,
+    or the artist only, as you choose; the title shortened to 12
+    characters, after a pause sign while the song plays or a play sign
+    while it's paused.
   - **Spectrum**: small frequency bars that follow the music.
   - **Pulse Dots**: a row of dots that follow how loud the music is.
 - Dimmed while paused. Hover for the full title and artist.
@@ -136,7 +137,12 @@ the close button). Choose how the bar shows what's playing:
 | **Spectrum** | Twenty-four small bars, low to high frequencies, measured from the music. Needs **cava**. |
 | **Pulse Dots** | Five dots whose size follows how loud the music is. |
 
-The choice applies at once and is kept after restarts. Spectrum and Pulse
+With Track Info, choose what its text shows under **Track Info shows**:
+**Artist — Title** (the default), **Title**, or **Artist**. A title that
+starts with a copy of the artist, as files from video sites often have
+("Tame Impala - Let It Happen"), is shown without it: "Let It Happen".
+
+The choices apply at once and are kept after restarts. Spectrum and Pulse
 Dots move only with real audio: while paused, or when there is no audio to
 read, they rest flat. They read only your music player's own sound, never
 other apps (see [Privacy](#privacy)).
@@ -189,7 +195,8 @@ o.bind("SUPER + SHIFT + M", "Music library", "omarchy-shell shell toggle communi
   with Vinyl's entry in `~/.config/omarchy/shell.json` as `libraryFolder`.
 - **Bar display:** choose it in the library's **Settings**. It is saved in
   the same entry as `displayMode`: `trackInfo`, `spectrum`, or `pulseDots`.
-  A missing or unknown value means Track Info.
+  A missing or unknown value means Track Info. What Track Info shows is
+  saved as `trackLabel`: `artistTitle` (the default), `title`, or `artist`.
 - **Playlists** are saved in `~/.local/share/vinyl/playlists.json`
   (or `$XDG_DATA_HOME/vinyl/playlists.json`). The folder and file are
   private to your user. Limits: 100 playlists, 1,000 tracks per playlist,

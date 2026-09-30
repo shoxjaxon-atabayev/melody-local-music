@@ -17,7 +17,7 @@ GlassSurface {
   // Null-safe view of the service. On a plugin hot-reload the shell drops
   // the service a moment before this card is destroyed; show idle meanwhile.
   readonly property var info: service ? service : ({
-    hasTrack: false, isPlaying: false, title: "", artist: "", album: "",
+    hasTrack: false, isPlaying: false, title: "", displayTitle: "", artist: "", album: "",
     artUrl: "", playerName: "", position: 0, length: 0,
     shuffle: false, repeatOne: false, canTogglePlaying: false, canGoNext: false,
     canGoPrevious: false, canSeek: false, canShuffle: false, canRepeat: false
@@ -32,7 +32,7 @@ GlassSurface {
   readonly property string statusText: !root.info.hasTrack ? ""
     : root.info.isPlaying ? "NOW PLAYING" : "PAUSED"
   readonly property string titleText: !root.info.hasTrack ? "Nothing playing"
-    : (root.info.title || "Unknown track")
+    : (root.info.displayTitle || "Unknown track")
   readonly property string artistText: !root.info.hasTrack ? "Open the library and click a song"
     : (root.info.artist || "Unknown artist")
 

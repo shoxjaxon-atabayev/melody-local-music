@@ -1534,7 +1534,7 @@ PanelWindow {
         anchors.bottom: parent.bottom
         width: parent.width
         hasTrack: win.service.hasTrack
-        title: win.service.title || Paths.trackTitle(Paths.baseName(win.service.playingPath)) || "Unknown track"
+        title: win.service.displayTitle || Paths.trackTitle(Paths.baseName(win.service.playingPath)) || "Unknown track"
         subtitle: [win.service.artist, win.service.album].filter(function(x) { return x !== "" }).join("  ·  ")
         cover: win.service.artUrl
         position: win.service.queue && win.service.queueIndex >= 0

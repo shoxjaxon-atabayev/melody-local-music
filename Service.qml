@@ -76,6 +76,10 @@ Item {
     : player ? Metadata.plainText(player.trackTitle, 300) : ""
   readonly property string artist: usingEngine ? Metadata.plainText(engine.tags.artist, 300)
     : player ? Metadata.plainText(player.trackArtist, 300) : ""
+  // The title as shown: without a leading copy of the artist
+  // ("Tame Impala - Let It Happen" -> "Let It Happen"). `title` stays as
+  // the player reports it.
+  readonly property string displayTitle: BarDisplay.cleanTitle(artist, title)
   readonly property string album: usingEngine ? Metadata.plainText(engine.tags.album, 300)
     : player ? Metadata.plainText(player.trackAlbum, 300) : ""
   readonly property string artUrl: usingEngine ? engineArtUrl
@@ -436,6 +440,20 @@ Item {
     if (mode !== savedDisplayMode) saveSettings({ displayMode: mode })
     // Choosing Spectrum again finds a cava installed since the last check.
     if (mode === BarDisplay.SPECTRUM && (audio.cavaState !== "available" || audio.cavaFailed)) audio.checkCava()
+    return true
+  }
+
+  // What Track Info shows: "artistTitle" (the default), "title", or
+  // "artist". Saved and applied like the display mode.
+  readonly property string savedTrackLabel: BarDisplay.normalizeLabel(ownEntry ? ownEntry.trackLabel : undefined)
+  property string chosenTrackLabel: ""
+  readonly property string trackLabel: chosenTrackLabel !== "" ? chosenTrackLabel : savedTrackLabel
+  onSavedTrackLabelChanged: chosenTrackLabel = ""
+
+  function setTrackLabel(label) {
+    if (BarDisplay.normalizeLabel(label) !== label) return false
+    chosenTrackLabel = label
+    if (label !== savedTrackLabel) saveSettings({ trackLabel: label })
     return true
   }
 

@@ -24,7 +24,8 @@
     "defaultSection": "right",
     "schema": [
       { "key": "libraryFolder", "type": "string", "label": "Music folder" },
-      { "key": "displayMode", "type": "string", "label": "Bar display (trackInfo, spectrum, or pulseDots)" }
+      { "key": "displayMode", "type": "string", "label": "Bar display (trackInfo, spectrum, or pulseDots)" },
+      { "key": "trackLabel", "type": "string", "label": "Track Info text (artistTitle, title, or artist)" }
     ]
   }
 }

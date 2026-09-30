@@ -10,9 +10,10 @@ import "core/Paths.js" as Paths
 // Vinyl's bar indicator, built on Omarchy's WidgetButton (the base of its bar
 // buttons: hover tooltip, click routing, the dimmed state). It shows:
 //   - a track: the chosen display mode. Track Info ("Artist — Title", the
-//     title cut to 12 characters, after a play or pause sign for the
-//     playback state), Spectrum, or Pulse Dots (both drawn from the
-//     player's real audio). Dimmed while paused;
+//     title only, or the artist only, as chosen; the title cut to 12
+//     characters; after a pause or play sign for the playback state),
+//     Spectrum, or Pulse Dots (both drawn from the player's real audio).
+//     Dimmed while paused;
 //   - no track and no usable music folder: a note and "Set up music library";
 //   - no track otherwise: a neutral note.
 // A vertical bar has no room for text or visualizations, so it always shows
@@ -41,7 +42,8 @@ BarWidget {
 
   readonly property string trackText: hasTrack
     ? BarDisplay.trackLabel(service.artist,
-        service.title || Paths.trackTitle(Paths.baseName(service.playingPath)) || "Unknown track")
+        service.displayTitle || Paths.trackTitle(Paths.baseName(service.playingPath)) || "Unknown track",
+        service.trackLabel)
     : ""
   readonly property string label: face === "text" ? trackText : face === "setup" ? "Set up music library" : ""
   // A layout guard only: real artist names fit; the tooltip has everything.
@@ -147,7 +149,7 @@ BarWidget {
       if (service.libraryStatus === "empty") return "Vinyl — your music folder has no music to play"
       return "Vinyl — your music folder can’t be opened"
     }
-    var title = service.title || "Unknown track"
+    var title = service.displayTitle || "Unknown track"
     var text = service.artist ? title + " — " + service.artist : title
     var status = service.audio.status
     if (face === "spectrum" && status === "noCava") text += "\nSpectrum needs cava: omarchy pkg add cava"
