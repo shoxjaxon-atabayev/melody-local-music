@@ -141,9 +141,9 @@ BarWidget {
 
   readonly property string tooltip: {
     if (!service) return "Melody"
+    if (service.needsSetup && service.requirements.missing.length)
+      return "Melody — click to install what it needs (" + service.requirements.missing.join(", ") + ")"
     if (!hasTrack) {
-      if (service.needsSetup && service.requirements.missing.length)
-        return "Melody — click to install what it needs (" + service.requirements.missing.join(", ") + ")"
       if (!service.needsLibrarySetup) return "Melody — nothing playing"
       if (service.libraryRoot === "") return "Melody — choose a music folder in the library"
       if (service.libraryStatus === "empty") return "Melody — your music folder has no music to play"

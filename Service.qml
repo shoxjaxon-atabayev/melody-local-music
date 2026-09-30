@@ -68,7 +68,12 @@ Item {
   property int busLookups: 0
 
   // ---------------------------------------------------------------- what is shown
-  readonly property bool usingEngine: engine.hasTrack && (engine.isPlaying
+  // Melody's own queue counts once it can be checked against the music
+  // folder: always when it came from the library this session, and a
+  // restored session only while a folder is set. Without one it can be
+  // neither checked nor played, so first-run setup comes first.
+  readonly property bool engineShown: engine.hasTrack && (engine.trusted || libraryRoot !== "")
+  readonly property bool usingEngine: engineShown && (engine.isPlaying
     || !(player && player.isPlaying) && !(player && lastPlayingKey !== "" && lastPlayingKey === playerKey(player)))
 
   readonly property bool isPlaying: usingEngine ? engine.isPlaying : player !== null && player.isPlaying
@@ -411,11 +416,13 @@ Item {
     onInstalled: if (root.displayMode === BarDisplay.SPECTRUM) root.audio.checkCava()
   }
 
-  // While nothing plays, the mini-player shows the setup steps in place of
-  // the player: install what's missing, then choose the music folder. Also
-  // later whenever mpv is missing, as nothing plays without it.
-  readonly property bool needsSetup: !hasTrack
-    && (needsLibrarySetup || requirements.missing.indexOf("mpv") !== -1)
+  // The mini-player shows the setup steps in place of the player: install
+  // what's missing, then choose the music folder. While nothing is shown,
+  // or while mpv is missing and Melody's own player is the one shown (it
+  // can't play without it); another player that plays keeps the card.
+  readonly property bool mpvMissing: requirements.missing.indexOf("mpv") !== -1
+  readonly property bool needsSetup: !hasTrack && needsLibrarySetup
+    || mpvMissing && (!hasTrack || usingEngine)
 
   // Playback found mpv missing: the setup card offers to install it.
   Connections {
