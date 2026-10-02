@@ -266,12 +266,15 @@ Delete that folder if you don't need them anymore.
 ## Privacy
 
 Melody needs no network access and sends nothing anywhere; its mpv plays
-local files only (online streaming is turned off). It reads only your chosen
-music folder and its own files, and writes only its playlists file, its
-session file, a temporary queue file and mpv's control socket in your
-private runtime folder (the queue file is emptied as soon as mpv has loaded
-it), and its settings entry in `shell.json`. The one exception is the
-setup's **Install** button: only when you click it, Omarchy's package
+local files only (online streaming is turned off). mpv opens only the songs
+Melody gives it: it never follows links inside a file (such as a playlist,
+cue sheet, or stream list disguised as a song) and loads no other files from
+beside it, so a file can't make it go online or read outside your music
+folder. Melody reads only your chosen music folder and its own files, and
+writes only its playlists file, its session file, mpv's control socket in
+your private runtime folder, and its settings entry in `shell.json`. The
+one exception is the setup's **Install** button: only when you click it,
+Omarchy's package
 installer downloads the missing packages from the Arch repositories, and
 Melody follows the install through a small marker file in your private
 runtime folder, deleted when it's done.

@@ -40,8 +40,6 @@ QtObject {
   // visualizations find Melody's audio stream by it.
   readonly property string clientName: "Melody"
   readonly property string socketPath: runtimeFolder + "/mpv.sock"
-  readonly property string listFile: runtimeFolder + "/queue.m3u"
-  readonly property string emptyList: "#EXTM3U\n"
   readonly property string sessionFile: dataFolder + "/session.json"
   readonly property int sessionMaxBytes: 4 * 1024 * 1024
 
@@ -248,26 +246,23 @@ QtObject {
     ensureRunning(function(ok, why) {
       if (gen !== root.generation) return
       if (!ok) { root.loadFailed(why); return }
-      root.writeList(list, function(written, why2) {
+      // Playing from the start: unpause once the new queue is in (never
+      // the old track). Otherwise pause first and seek when the file has
+      // loaded, so nothing plays from 0.
+      var start = root.pendingStart
+      var fromStart = !!start && start.play && start.position === 0
+      if (!fromStart) root.send(["set_property", "pause", true])
+      root.send(["set_property", "loop-file", root.repeatOne ? "inf" : "no"])
+      // mpv drops the old queue and idles, so nothing plays until the
+      // whole new queue is in.
+      root.send(["stop"])
+      root.addFiles(list.map(function(p) { return ["loadfile", p, "append"] }))
+      root.send(["playlist-play-index", Math.max(0, at)], function(reply) {
         if (gen !== root.generation) return
-        if (!written) { root.loadFailed(why2); return }
-        // Playing from the start: unpause once the new queue is in (never
-        // the old track). Otherwise pause first and seek when the file has
-        // loaded, so nothing plays from 0.
-        var start = root.pendingStart
-        var fromStart = !!start && start.play && start.position === 0
-        if (!fromStart) root.send(["set_property", "pause", true])
-        root.send(["set_property", "loop-file", root.repeatOne ? "inf" : "no"])
-        root.send(["set_property", "playlist-start", at])
-        root.send(["loadlist", root.listFile, "replace"], function(reply) {
-          root.send(["set_property", "playlist-start", "auto"])
-          root.clearList()
-          if (gen !== root.generation) return
-          if (reply.error !== "success") { root.loadFailed("mpv couldn't open the queue."); return }
-          if (fromStart && root.pendingStart && root.pendingStart.play) root.send(["set_property", "pause", false])
-          root.acceptPlaylist = true
-          root.resync()
-        })
+        if (reply.error !== "success") { root.loadFailed("mpv couldn't open the queue."); return }
+        if (fromStart && root.pendingStart && root.pendingStart.play) root.send(["set_property", "pause", false])
+        root.acceptPlaylist = true
+        root.resync()
       })
     })
   }
@@ -286,49 +281,35 @@ QtObject {
     onTriggered: if (root.loading) root.loadFailed("mpv didn't respond in time.")
   }
 
-  // The queue goes to mpv through a private M3U file, emptied as soon as
-  // mpv has read it.
-  function writeList(list, callback) {
-    files.ensureDir(runtimeFolder, function(dirOk, why) {
-      if (!dirOk) { callback(false, "Melody can't write its queue file. " + why); return }
-      root.files.writePrivate(root.listFile, root.emptyList + list.join("\n") + "\n", root.emptyList, function(ok, why2) {
-        callback(ok, ok ? "" : "Melody can't write its queue file. " + why2)
-      })
-    })
-  }
+  // The queue goes to mpv one loadfile per track: mpv follows no references
+  // (see mpvCommand), so it refuses loadlist. mpv stops reporting its
+  // playlist meanwhile; sending it again after every entry would make a
+  // long queue slow to load. Commands run in order: a command sent after
+  // these runs once they are all in.
+  readonly property int playlistObserver: observed.indexOf("playlist") + 1
 
-  function clearList() {
-    files.writePrivate(listFile, emptyList, emptyList, function() {})
+  function addFiles(commands, callback) {
+    send(["unobserve_property", playlistObserver])
+    for (var i = 0; i < commands.length; i++) send(commands[i])
+    send(["observe_property", playlistObserver, "playlist"], callback)
   }
 
   // Changes the queue order around the current track without interrupting
-  // it: mpv drops every other entry, then gets the others before and after.
+  // it: mpv drops every other entry, then gets the others after and before.
   function reorder(order, at) {
     paths = order
     index = at
     if (!live) return
     var gen = generation
-    var before = order.slice(0, at)
-    var after = order.slice(at + 1)
+    var commands = []
+    for (var i = at + 1; i < order.length; i++) commands.push(["loadfile", order[i], "append"])
+    for (var j = 0; j < at; j++) commands.push(["loadfile", order[j], "insert-at", j])
     acceptPlaylist = false
     send(["playlist-clear"])
-    function done() {
-      root.clearList()
+    addFiles(commands, function() {
       if (gen !== root.generation) return
       root.acceptPlaylist = true
       root.resync()
-    }
-    function insertBefore() {
-      if (before.length === 0) { done(); return }
-      root.writeList(before, function(ok) {
-        if (!ok || gen !== root.generation) { done(); return }
-        root.send(["loadlist", root.listFile, "insert-at", 0], done)
-      })
-    }
-    if (after.length === 0) { insertBefore(); return }
-    writeList(after, function(ok) {
-      if (!ok || gen !== root.generation) { done(); return }
-      root.send(["loadlist", root.listFile, "append"], insertBefore)
     })
   }
 
@@ -358,6 +339,12 @@ QtObject {
       "--force-window=no",
       "--audio-display=no",
       "--ytdl=no",                    // local files only, never online
+      // Only the files Melody passes: no references inside a file
+      // (playlists, cue sheets, EDL, HLS, ordered chapters, archives) to
+      // URLs or files outside the library, and no subtitle, audio, or cover
+      // files loaded from beside it.
+      "--access-references=no",
+      "--autoload-files=no",
       "--load-scripts=no",
       "--resume-playback=no",         // Melody keeps positions itself
       "--save-position-on-quit=no",
