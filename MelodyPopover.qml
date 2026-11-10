@@ -32,8 +32,8 @@ PanelWindow {
   readonly property bool horizontalBar: barPosition === "top" || barPosition === "bottom"
   readonly property real screenW: screen ? screen.width : 0
   readonly property real screenH: screen ? screen.height : 0
-  readonly property real barThickness: anchorWindow
-    ? (horizontalBar ? anchorWindow.height : anchorWindow.width) : 0
+  readonly property real barThickness:
+      horizontalBar ? Style.bar.sizeHorizontal : Style.bar.sizeVertical
 
   // Centre of the Melody icon along the bar. The Omarchy bar spans its whole
   // screen edge, so bar-window coordinates equal screen coordinates on that
