@@ -38,7 +38,7 @@ GlassSurface {
 
   width: theme.cardWidth
   height: content.implicitHeight + insetTop + insetBottom
-  padding: theme.cardPadding
+  padding: 16
 
   Column {
     id: content

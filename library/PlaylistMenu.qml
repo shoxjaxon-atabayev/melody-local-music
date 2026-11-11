@@ -222,6 +222,7 @@ Item {
       TextField {
         id: nameField
         objectName: "menuNameField"
+        maximumLength: 64
         visible: root.naming
         width: column.width
         foreground: theme.textPrimary

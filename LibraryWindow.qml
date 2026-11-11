@@ -244,13 +244,16 @@ PanelWindow {
   // Songs grouped by folder: the library folder's own songs first, then
   // each folder in natural order, its songs in natural order.
   function buildIndex(rootPath, found) {
-    var byFolder = {}
+    var byFolder = Object.create(null)
     var folders = []
     for (var i = 0; i < found.files.length; i++) {
       var rel = found.files[i]
       var slash = rel.lastIndexOf("/")
       var folder = slash > 0 ? rel.slice(0, slash) : ""
-      if (!byFolder.hasOwnProperty(folder)) { byFolder[folder] = []; folders.push(folder) }
+      if (!Object.prototype.hasOwnProperty.call(byFolder, folder)) {
+        byFolder[folder] = []
+        folders.push(folder)
+      }
       byFolder[folder].push(rel.slice(slash + 1))
     }
     folders.sort(function(a, b) {
@@ -893,6 +896,7 @@ PanelWindow {
           TextField {
             id: search
             objectName: "search"
+            maximumLength: 256
             anchors.verticalCenter: parent.verticalCenter
             width: theme.px(260)
             visible: !win.chooser && win.libraryRoot !== ""
@@ -1064,6 +1068,7 @@ PanelWindow {
           TextField {
             id: sideNameField
             objectName: "sideNameField"
+            maximumLength: 64
             visible: win.naming === "sidebar"
             width: parent.width
             foreground: theme.textPrimary
@@ -1218,6 +1223,7 @@ PanelWindow {
               TextField {
                 id: renameField
                 objectName: "renameField"
+                maximumLength: 64
                 width: parent.width
                 foreground: theme.textPrimary
                 placeholderText: "Playlist name"
